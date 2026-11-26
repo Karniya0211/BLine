@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Production Orders{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Production Orders & Batch Execution</h2>
+    <div class="ff-header-sub">Manage factory manufacturing batches, check BOM raw material sufficiency, track progress, and finalize production stock.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('production_orders', tab='orders') }}" class="ff-tab-btn {% if active_tab == 'orders' %}active{% endif %}">Batch Roster</a>
+    {% if can_manage %}
+    <a href="{{ url_for('production_orders', tab='new') }}" class="ff-tab-btn {% if active_tab == 'new' %}active{% endif %}">Create Production Order</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'orders' %}
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Active & Historical Production Batches ({{ production_orders|length }})</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Batch Code</th>
+                <th>Target Finished Good</th>
+                <th>Target Qty</th>
+                <th>Actual Qty</th>
+                <th>Start Date</th>
+                <th>Est. Completion</th>
+                <th>Progress</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for po in production_orders %}
+            <tr>
+                <td><b>{{ po.production_id }}</b></td>
+                <td>{{ po.product_name }}</td>
+                <td>{{ po.target_quantity }} pkts</td>
+                <td>{{ po.actual_quantity or '-' }}</td>
+                <td>{{ po.start_date }}</td>
+                <td>{{ po.expected_completion_date }}</td>
+                <td><b>{{ po.progress_percentage }}%</b></td>
+                <td>
+                    <span class="ff-badge {% if po.status == 'Completed' %}ff-badge-active{% elif po.status == 'In Progress' %}ff-badge-role{% elif po.status == 'Cancelled' %}ff-badge-inactive{% else %}ff-badge-role{% endif %}">
+                        {{ po.status }}
+                    </span>
+                </td>
+                <td>
+                    <a href="{{ url_for('production_orders', inspect_id=po.production_id) }}" class="ff-btn" style="padding: 2px 8px; font-size: 11px;">Inspect / Update</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" style="text-align:center; color:#6b7280; padding:16px;">No production batches currently logged.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if target_po %}
+<hr>
+<h3 style="margin: 0 0 10px 0; font-size: 16px;">Batch Inspection & Execution : {{ target_po.production_id }}</h3>
+<div style="background: #ffffff; border: 1px solid #d1d5db; padding: 12px; border-radius: 3px; font-size: 12px; margin-bottom: 14px;">
+    <div><b>Batch Code:</b> {{ target_po.production_id }} | <b>Status:</b> <b>{{ target_po.status }}</b> | <b>Progress:</b> {{ target_po.progress_percentage }}%</div>
+    <div><b>Product:</b> {{ target_po.product_name }} ({{ target_po.product_id }}) | <b>Target Output:</b> {{ target_po.target_quantity }} packets</div>
+    <div><b>Timeline:</b> {{ target_po.start_date }} to {{ target_po.expected_completion_date }}</div>
+    {% if target_po.notes %}<div><b>Batch Notes:</b> {{ target_po.notes }}</div>{% endif %}
+</div>
+
+<!-- BOM Material Sufficiency Check Table -->
+<h5 style="margin: 0 0 8px 0; font-size: 13px;">Bill of Materials (BOM) Requirements for {{ target_po.target_quantity }} Packets</h5>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Raw Material</th>
+                <th>Req / Unit</th>
+                <th>Total Required</th>
+                <th>Available Inventory</th>
+                <th>Stock Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in bom_reqs %}
+            <tr>
+                <td><b>{{ req.material_name }}</b> ({{ req.material_id }})</td>
+                <td>{{ req.required_per_unit }} {{ req.unit }}</td>
+                <td><b>{{ req.total_required }} {{ req.unit }}</b></td>
+                <td>{{ req.available_stock }} {{ req.unit }}</td>
+                <td>
+                    {% if req.sufficient %}
+                        <span class="ff-badge ff-badge-active">SUFFICIENT</span>
+                    {% else %}
+                        <span class="ff-badge ff-badge-inactive">SHORTAGE: {{ req.shortage }} {{ req.unit }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align:center; color:#6b7280; padding:12px;">No BOM configured for this SKU. Configure BOM before batch execution.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if not all_materials_avail and target_po.status != 'Completed' %}
+<div class="ff-alert ff-alert-error">
+    <b>RAW MATERIAL SHORTAGE WARNING:</b>
+    <ul style="margin: 4px 0 0 16px; padding: 0;">
+        {% for s in shortages %}
+        <li>{{ s }}</li>
+        {% endfor %}
+    </ul>
+    Production completion is blocked until raw materials are received in inventory.
+</div>
+{% endif %}
+
+{% if can_manage and target_po.status != 'Completed' %}
+<div class="ff-col-2" style="margin-top: 14px;">
+    <!-- Update Progress -->
+    <div class="ff-card">
+        <h5 style="margin: 0 0 8px 0; font-size: 13px;">Update Batch Progress</h5>
+        <form method="POST" action="{{ url_for('update_production_status_post') }}">
+            <input type="hidden" name="production_id" value="{{ target_po.production_id }}">
+            <label>Batch Status</label>
+            <select name="status">
+                <option value="Pending" {% if target_po.status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="In Progress" {% if target_po.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Cancelled" {% if target_po.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+
+            <label>Progress Percentage (0 - 99%)</label>
+            <input type="number" min="0" max="99" name="progress_percentage" value="{{ target_po.progress_percentage }}">
+
+            <label>Operational Notes</label>
+            <input type="text" name="notes" value="{{ target_po.notes or '' }}" placeholder="Fryer batch update...">
+
+            <button type="submit" class="ff-btn ff-btn-block" style="margin-top: 8px;">Update Progress</button>
+        </form>
+    </div>
+
+    <!-- Complete Production Workflow -->
+    <div class="ff-card">
+        <h5 style="margin: 0 0 8px 0; font-size: 13px;">Finalize Production & Update Stock</h5>
+        <p style="font-size: 11px; color: #4b5563; margin-top: 0;">
+            Marking as Completed automatically:
+            <br>1. Deducts required raw materials from inventory.
+            <br>2. Adds finished goods to finished stock.
+            <br>3. Generates immutable inventory transaction audit records.
+        </p>
+
+        {% if not all_materials_avail %}
+            <button class="ff-btn" disabled style="opacity: 0.6; width: 100%;">Complete Production (Blocked by Material Shortage)</button>
+        {% else %}
+            <form method="POST" action="{{ url_for('complete_production_post') }}">
+                <input type="hidden" name="production_id" value="{{ target_po.production_id }}">
+                <label>Actual Yield / Produced Quantity (Packets) *</label>
+                <input type="number" min="1" name="actual_quantity" value="{{ target_po.target_quantity }}" required>
+
+                <button type="submit" class="ff-btn ff-btn-primary ff-btn-block" style="margin-top: 8px;">Complete Production Order & Commit Stock</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% elif active_tab == 'new' and can_manage %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Create New Production Order</h4>
+    <form method="POST" action="{{ url_for('create_production_order_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Finished Product to Manufacture *</label>
+                <select name="product_id" required>
+                    {% for p in active_products %}
+                    <option value="{{ p.product_id }}">{{ p.product_id }} : {{ p.name }} ({{ p.pack_size }})</option>
+                    {% endfor %}
+                </select>
+
+                <label>Target Production Quantity (Packets) *</label>
+                <input type="number" min="1" step="10" name="target_quantity" value="100" required>
+            </div>
+            <div>
+                <label>Production Start Date *</label>
+                <input type="date" name="start_date" value="{{ today_str }}" required>
+
+                <label>Expected Completion Date *</label>
+                <input type="date" name="expected_completion_date" value="{{ today_str }}" required>
+            </div>
+        </div>
+
+        <label>Production Instructions / Batch Notes</label>
+        <textarea name="notes" rows="2" placeholder="e.g. Extra crisp batch, nitrogen packaging line 2..."></textarea>
+
+        <div style="margin-top: 10px;">
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Issue Production Order</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

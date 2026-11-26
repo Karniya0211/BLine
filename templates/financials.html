@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Financial Management{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Financial Management</h2>
+    <div class="ff-header-sub">Sales, GST, production cost, inventory valuation, and receivables from recorded business data.</div>
+</div>
+
+<div class="ff-card">
+    <form method="GET" action="{{ url_for('financials') }}" class="ff-col-2">
+        <div>
+            <label>From date</label>
+            <input type="date" name="start_date" value="{{ start_date }}">
+        </div>
+        <div>
+            <label>To date</label>
+            <input type="date" name="end_date" value="{{ end_date }}">
+        </div>
+        <div>
+            <label>Customer</label>
+            <select name="customer">
+                <option value="">All customers</option>
+                {% for customer in customers %}
+                <option value="{{ customer.name }}" {% if customer.name == selected_customer %}selected{% endif %}>{{ customer.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Production product</label>
+            <select name="product_id">
+                <option value="">All products</option>
+                {% for product in products %}
+                <option value="{{ product.product_id }}" {% if product.product_id == selected_product %}selected{% endif %}>{{ product.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Production batch</label>
+            <select name="production_id">
+                <option value="">All batches</option>
+                {% for batch in production_orders %}
+                <option value="{{ batch.production_id }}" {% if batch.production_id == selected_production %}selected{% endif %}>{{ batch.production_id }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="ff-btn ff-btn-primary">Apply date range</button>
+    </form>
+</div>
+
+<div class="ff-grid-4" style="margin-bottom:20px;">
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Net Revenue</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.sales) }}</div>
+        <div class="ff-metric-change">GST excluded from revenue</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Output GST</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.gst) }}</div>
+        <div class="ff-metric-change">From recorded invoices</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Production Cost</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.production_cost) }}</div>
+        <div class="ff-metric-change">Costed batches only</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Receivables</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.receivables) }}</div>
+        <div class="ff-metric-change">Recorded invoices less confirmed payments</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Gross Profit</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.gross_profit) }}</div>
+        <div class="ff-metric-change">Only batches with usable cost records</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Gross Margin</div>
+        <div class="ff-metric-value">{{ "%.2f"|format(reports_data.summaries.gross_margin) }}%</div>
+        <div class="ff-metric-change">Based on costed taxable sales</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Inventory Valuation</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.inventory_value) }}</div>
+        <div class="ff-metric-change">Raw materials at current recorded rates</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Payables / Input GST</div>
+        <div class="ff-metric-value">Rs. {{ "%.2f"|format(reports_data.summaries.payables) }} / Rs. {{ "%.2f"|format(reports_data.summaries.input_gst) }}</div>
+        <div class="ff-metric-change">Recorded supplier invoices and eligible ITC</div>
+    </div>
+</div>
+
+<div class="ff-alert ff-alert-info">
+    {{ reports_data.cost_data_note }}
+    {{ reports_data.purchase_data_note }}
+    GST figures are summaries of recorded invoices, not official GST returns or filing data. Purchase ITC and supplier payables are unavailable until purchase invoices are recorded.
+</div>
+
+<div class="ff-card">
+    <h4>Monthly Financial Trend</h4>
+    <div id="financial-trend" style="min-height:320px;"></div>
+</div>
+
+<div class="ff-card">
+    <h4>Product-wise Gross Profit</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead><tr><th>Product</th><th>Taxable Sales</th><th>Estimated COGS</th><th>Gross Profit</th></tr></thead>
+            <tbody>
+                {% for product, values in reports_data.product_profitability.items() %}
+                <tr><td>{{ product }}</td><td>Rs. {{ "%.2f"|format(values.sales) }}</td><td>Rs. {{ "%.2f"|format(values.cogs) }}</td><td>Rs. {{ "%.2f"|format(values.profit) }}</td></tr>
+                {% else %}
+                <tr><td colspan="4" style="text-align:center;">No costed product sales in this date range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% for report_key, title in report_titles.items() %}
+<div class="ff-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h4 style="margin:0;">{{ title }}</h4>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            {% for file_format in ['csv', 'xlsx', 'pdf'] %}
+            <a class="ff-btn" href="{{ url_for('financial_export', report_type=report_key, format=file_format, start_date=start_date, end_date=end_date, customer=selected_customer, product_id=selected_product, production_id=selected_production) }}">{{ file_format|upper }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="ff-table-wrapper" style="margin-top:12px;">
+        {% set rows = reports_data[report_key] %}
+        {% if rows %}
+        <table class="ff-table">
+            <thead>
+                <tr>{% for column in rows[0].keys() %}<th>{{ column }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}</tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="padding:12px;text-align:center;color:#5f6d7a;">No recorded data for this report and date range.</div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+{% if can_record_expenses %}
+<div class="ff-card">
+    <h4>Record Production Batch Expenses</h4>
+    <p>Expenses are append-only and attributed to the selected batch and logged-in user.</p>
+    <form method="POST" action="{{ url_for('financial_expense_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Production batch *</label>
+                <select name="production_id" required>
+                    {% for batch in production_orders %}
+                    <option value="{{ batch.production_id }}">{{ batch.production_id }} - {{ batch.product_name }} ({{ batch.status }})</option>
+                    {% endfor %}
+                </select>
+                <label>Expense date *</label>
+                <input type="date" name="expense_date" required>
+                <label>Labour cost (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="labour_cost" value="0">
+                <label>Utilities / electricity cost (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="utilities_cost" value="0">
+            </div>
+            <div>
+                <label>Machinery / maintenance cost (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="maintenance_cost" value="0">
+                <label>Other manufacturing cost (Rs.)</label>
+                <input type="number" min="0" step="0.01" name="other_cost" value="0">
+                <label>Notes</label>
+                <textarea name="notes" rows="3"></textarea>
+            </div>
+        </div>
+        <button type="submit" class="ff-btn ff-btn-primary">Record batch expenses</button>
+    </form>
+</div>
+{% endif %}
+{% if can_record_expenses %}
+<div class="ff-card">
+    <h4>Record Supplier Purchase Invoice</h4>
+    <form method="POST" action="{{ url_for('financial_purchase_post') }}" class="ff-col-2">
+        <div><label>Invoice number *</label><input name="purchase_invoice_number" required><label>Purchase date *</label><input type="date" name="purchase_date" required><label>Supplier</label><input name="supplier_name"><label>Material *</label><select name="material_id" required>{% for material in materials %}<option value="{{ material.material_id }}">{{ material.name }}</option>{% endfor %}</select></div>
+        <div><label>Quantity *</label><input type="number" min="0.01" step="0.01" name="quantity" required><label>Unit price *</label><input type="number" min="0" step="0.01" name="unit_price" required><label>GST rate (%)</label><input type="number" min="0" step="0.01" name="gst_rate" value="0"><label>Amount paid</label><input type="number" min="0" step="0.01" name="amount_paid" value="0"><label>Tax type</label><select name="tax_type"><option value="intrastate">CGST + SGST</option><option value="interstate">IGST</option></select><label><input type="checkbox" name="itc_eligible"> Eligible for ITC</label></div>
+        <button type="submit" class="ff-btn ff-btn-primary">Record purchase invoice</button>
+    </form>
+</div>
+{% endif %}
+<script>
+    const trend = {{ monthly_chart|tojson }};
+    Plotly.newPlot("financial-trend", [
+        {x: trend.labels, y: trend.revenue, type: "bar", name: "Taxable sales"},
+        {x: trend.labels, y: trend.expenses, type: "bar", name: "Production costs"},
+        {x: trend.labels, y: trend.gross_profit, type: "scatter", mode: "lines+markers", name: "Costed gross profit"}
+    ], {barmode: "group", margin: {t: 20}, yaxis: {title: "INR"}}, {responsive: true});
+</script>
+{% endblock %}

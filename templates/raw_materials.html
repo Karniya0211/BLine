@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Raw Material Master{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Raw Material Master</h2>
+    <div class="ff-header-sub">Ingredient formulations, packaging supplies, baseline purchase costs, and minimum reorder buffers.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('raw_materials', tab='directory') }}" class="ff-tab-btn {% if active_tab == 'directory' %}active{% endif %}">Inventory Directory</a>
+    {% if can_edit %}
+    <a href="{{ url_for('raw_materials', tab='add') }}" class="ff-tab-btn {% if active_tab == 'add' %}active{% endif %}">Register Material</a>
+    <a href="{{ url_for('raw_materials', tab='edit') }}" class="ff-tab-btn {% if active_tab == 'edit' %}active{% endif %}">Edit Material</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'directory' %}
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Raw Materials & Packaging Items ({{ materials|length }})</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Item Code</th>
+                <th>Material Name</th>
+                <th>Category</th>
+                <th>Standard Unit</th>
+                <th>Rate (INR)</th>
+                <th>Available Stock</th>
+                <th>Safety Buffer</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in materials %}
+            <tr>
+                <td><b>{{ m.material_id }}</b></td>
+                <td>{{ m.name }}</td>
+                <td>{{ m.category }}</td>
+                <td>{{ m.unit }}</td>
+                <td>Rs. {{ "%.2f"|format(m.purchase_rate) }}</td>
+                <td><b>{{ "%.2f"|format(m.stock_qty|default(0)) }} {{ m.unit }}</b></td>
+                <td>{{ m.min_stock_level }} {{ m.unit }}</td>
+                <td><span class="ff-badge {% if m.status == 'Active' %}ff-badge-active{% else %}ff-badge-inactive{% endif %}">{{ m.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% elif active_tab == 'edit' and can_edit %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Edit Raw Material</h4>
+    {% for m in materials %}
+    <form method="POST" action="{{ url_for('edit_raw_material_post') }}" style="border-bottom:1px solid #e5e7eb; padding-bottom:12px; margin-bottom:12px;">
+        <input type="hidden" name="material_id" value="{{ m.material_id }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Material ID</label>
+                <input type="text" value="{{ m.material_id }}" disabled>
+                <label>Material Name</label>
+                <input type="text" name="name" value="{{ m.name }}" required>
+                <label>Category</label>
+                <select name="category">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if cat == m.category %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <label>Unit</label>
+                <select name="unit">
+                    {% for u in units %}
+                    <option value="{{ u }}" {% if u == m.unit %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Available Stock</label>
+                <input type="number" step="0.01" min="0" name="stock_qty" value="{{ m.stock_qty|default(0) }}">
+                <label>Purchase Rate</label>
+                <input type="number" step="0.01" min="0" name="purchase_rate" value="{{ m.purchase_rate }}">
+                <label>Minimum Stock</label>
+                <input type="number" step="0.01" min="0" name="min_stock_level" value="{{ m.min_stock_level }}">
+                <label>Status</label>
+                <select name="status">
+                    <option value="Active" {% if m.status == 'Active' %}selected{% endif %}>Active</option>
+                    <option value="Inactive" {% if m.status != 'Active' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+        </div>
+        <label>Description</label>
+        <textarea name="description" rows="2">{{ m.description|default('') }}</textarea>
+        <button type="submit" class="ff-btn ff-btn-primary">Save {{ m.material_id }}</button>
+    </form>
+    {% endfor %}
+</div>
+
+{% elif active_tab == 'add' and can_edit %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Register Raw Material Item</h4>
+    <form method="POST" action="{{ url_for('add_raw_material_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Item Code (Required) *</label>
+                <input type="text" name="material_id" placeholder="e.g. RM-006" required>
+
+                <label>Material Name *</label>
+                <input type="text" name="name" placeholder="e.g. Pure Cow Ghee" required>
+
+                <label>Category *</label>
+                <select name="category">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Standard Unit *</label>
+                <select name="unit">
+                    {% for u in units %}
+                    <option value="{{ u }}">{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Standard Purchase Rate (INR per unit) *</label>
+                <input type="number" step="0.5" min="0.1" name="purchase_rate" value="450.0" required>
+
+                <label>Minimum Safety Buffer *</label>
+                <input type="number" step="5" min="0.0" name="min_stock_level" value="50.0" required>
+
+                <label>Status</label>
+                <select name="status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <label>Quality & Storage Specifications</label>
+        <textarea name="description" rows="2" placeholder="Purity metrics, moisture thresholds, storage conditions..."></textarea>
+
+        <div style="margin-top: 10px;">
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Commit Material to Database</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Product Master{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Product Master</h2>
+    <div class="ff-header-sub">Finished goods SKU registry, pack specifications, HSN tax codes, and base price schedules.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('products', tab='directory') }}" class="ff-tab-btn {% if active_tab == 'directory' %}active{% endif %}">SKU Directory</a>
+    {% if can_edit %}
+    <a href="{{ url_for('products', tab='add') }}" class="ff-tab-btn {% if active_tab == 'add' %}active{% endif %}">Register Product</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'directory' %}
+<form method="GET" action="{{ url_for('products') }}" style="margin-bottom: 16px;">
+    <input type="hidden" name="tab" value="directory">
+    <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1fr; gap: 10px; align-items: flex-end;">
+        <div>
+            <label>Search SKU or Name</label>
+            <input type="text" name="search" value="{{ search_kw }}" placeholder="e.g. Murukku, PRD-001">
+        </div>
+        <div>
+            <label>Product Line Filter</label>
+            <select name="category" onchange="this.form.submit()">
+                <option value="All">All</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if cat == sel_cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Status Filter</label>
+            <select name="status" onchange="this.form.submit()">
+                <option value="All" {% if sel_status == 'All' %}selected{% endif %}>All</option>
+                <option value="Active" {% if sel_status == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if sel_status == 'Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Filter</button>
+        </div>
+    </div>
+</form>
+
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Finished Goods SKUs ({{ filtered_products|length }})</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>SKU Code</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Pack Size</th>
+                <th>Price (INR)</th>
+                <th>GST (%)</th>
+                <th>HSN Code</th>
+                <th>Warehouse Stock</th>
+                <th>Status</th>
+                {% if can_edit %}<th>Actions</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in filtered_products %}
+            <tr>
+                <td><b>{{ p.product_id }}</b></td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.category }}</td>
+                <td>{{ p.pack_size }}</td>
+                <td>Rs. {{ "%.2f"|format(p.selling_price) }}</td>
+                <td>{{ p.gst_rate }}%</td>
+                <td>{{ p.hsn_code }}</td>
+                <td><b>{{ p.stock_qty }} pkts</b></td>
+                <td><span class="ff-badge {% if p.status == 'Active' %}ff-badge-active{% else %}ff-badge-inactive{% endif %}">{{ p.status }}</span></td>
+                {% if can_edit %}
+                <td>
+                    <form method="POST" action="{{ url_for('toggle_product_status') }}" style="display:inline;">
+                        <input type="hidden" name="product_id" value="{{ p.product_id }}">
+                        <button type="submit" class="ff-btn" style="padding: 2px 8px; font-size: 11px;">
+                            {% if p.status == 'Active' %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10" style="text-align:center; color:#6b7280; padding:16px;">No matching product records found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% elif active_tab == 'add' and can_edit %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Register New Finished Good SKU</h4>
+    <form method="POST" action="{{ url_for('add_product_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>SKU Code (Required) *</label>
+                <input type="text" name="product_id" placeholder="e.g. PRD-005" required>
+
+                <label>Product Name (Required) *</label>
+                <input type="text" name="name" placeholder="e.g. Ribbon Pakoda 200g" required>
+
+                <label>Category *</label>
+                <select name="category">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Pack Size *</label>
+                <input type="text" name="pack_size" value="200g" required>
+            </div>
+            <div>
+                <label>Selling Price (INR) *</label>
+                <input type="number" step="0.5" min="1.0" name="selling_price" value="60.0" required>
+
+                <label>GST Rate (%) *</label>
+                <input type="number" step="0.5" min="0.0" max="28.0" name="gst_rate" value="5.0" required>
+
+                <label>HSN Code *</label>
+                <input type="text" name="hsn_code" value="19059040" required>
+
+                <label>Initial Lifecycle Status</label>
+                <select name="status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <label>Manufacturing and Packaging Specifications</label>
+        <textarea name="description" rows="2" placeholder="Formulation specs and standard shelf-life..."></textarea>
+
+        <div style="margin-top: 10px;">
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Commit SKU to Database</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

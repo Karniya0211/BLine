@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLine - {% block title %}Manufacturing Operations System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Plotly CDN for existing charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+    <div class="ff-layout">
+        <!-- Sidebar -->
+        <aside class="ff-sidebar">
+            <div class="ff-sidebar-brand">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" width="220" alt="BLine">
+            </div>
+            <div class="ff-sidebar-user">
+                <div class="ff-user-name">{{ session.get('user_name', 'Factory Operator') }}</div>
+                <div class="ff-user-email">{{ session.get('user_email', '') }}</div>
+                <div style="margin-top: 6px;"><span class="ff-badge ff-badge-role">{{ session.get('user_role', 'Sales Representative') }}</span></div>
+            </div>
+
+            <div class="ff-nav-title">Operations Menu</div>
+            <nav class="ff-nav-list">
+                {% for page_title, page_endpoint in nav_items %}
+                    <a href="{{ url_for(page_endpoint) }}" class="ff-nav-item {% if current_page == page_title %}active{% endif %}">
+                        {{ page_title }}
+                    </a>
+                {% endfor %}
+            </nav>
+
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('logout') }}" class="ff-btn ff-btn-block" style="background:#1a2734; color:#d5dbe1; border-color:#283747;">Sign Out Session</a>
+            </div>
+
+            <div class="ff-sidebar-footer">
+                BLine ERP v2.0.0 (Phase 2)<br>
+                Manufacturing Unit 1 (Chennai)<br>
+                Murukku • Mixture • Chips • Sweets
+            </div>
+        </aside>
+
+        <!-- Main Content Surface -->
+        <main class="ff-main">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="ff-alert ff-alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

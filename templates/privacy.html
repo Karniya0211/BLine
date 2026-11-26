@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Privacy and Data Protection Policy</h2>
+    <div class="ff-header-sub">Effective Date: January 1, 2026 | Document Reference: FF-DPDP-2026-V1</div>
+</div>
+
+<div class="ff-card" style="font-size: 13px; line-height: 1.6;">
+    <h4 style="margin: 0 0 6px 0; font-size: 15px;">1. Data Governance and Principles</h4>
+    <p>This Privacy Policy outlines how BLine collects, processes, and protects enterprise and employee data in accordance with the Digital Personal Data Protection Act (DPDP), 2023 and applicable commercial information security laws.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">2. Categories of Information Collected</h4>
+    <p>BLine records and retains the following operational information:</p>
+    <ul>
+        <li><b>Employee Credentials:</b> Authorized work email addresses, administrative roles, login timestamps, and system change logs.</li>
+        <li><b>Commercial Partner Data:</b> Customer and supplier business names, authorized signatory contact details, registered GSTINs, and delivery locations.</li>
+        <li><b>System Telemetry:</b> IP addresses, session duration, and API query performance for security auditing.</li>
+    </ul>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">3. Purpose of Processing</h4>
+    <p>Data collected within the ERP is utilized exclusively for legitimate business purposes:</p>
+    <ul>
+        <li>Facilitating factory inventory planning, production dispatch, and GST compliance reporting.</li>
+        <li>Enforcing role-based access boundaries to protect proprietary recipes and vendor pricing contracts.</li>
+        <li>Fulfilling statutory requirements prescribed by the Goods and Services Tax Network (GSTN) and FSSAI audits.</li>
+    </ul>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">4. Data Retention and Security Architecture</h4>
+    <p>Operational and audit records are retained for a minimum statutory period of eight (8) financial years as mandated under Section 128 of the Companies Act, 2013. Master data is encrypted in transit using TLS 1.3 and at rest within Google Cloud Firestore storage clusters.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">5. Contact and Grievance Officer</h4>
+    <p>For inquiries regarding data access, user rights, or correction of registered business data, contact the designated Internal Compliance and Grievance Officer at <code>compliance@BLine.internal</code>.</p>
+</div>
+{% endblock %}

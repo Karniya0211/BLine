@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Reports Portal{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Reports Portal</h2>
+    <div class="ff-header-sub">Role-filtered sales, production, inventory, GST, payment, and activity reports.</div>
+</div>
+
+{% if role in ['Owner', 'Admin', 'Sales Representative', 'Statutory Auditor'] %}
+<div class="ff-col-2">
+    <div class="ff-card">
+        <h4>Order Report</h4>
+        <div class="ff-table-wrapper">
+            <table class="ff-table">
+                <thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for o in orders %}
+                <tr><td><b>{{ o.order_id }}</b></td><td>{{ o.customer_name }}</td><td>Rs. {{ "%.2f"|format(o.total_amount|default(0)) }}</td><td>{{ o.status }}</td></tr>
+                {% else %}<tr><td colspan="4" style="text-align:center;">No permitted order records.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="ff-card">
+        <h4>Sales and GST Report</h4>
+        <div class="ff-table-wrapper">
+            <table class="ff-table">
+                <thead><tr><th>Invoice</th><th>Customer</th><th>Taxable</th><th>Total</th></tr></thead>
+                <tbody>
+                {% for i in invoices %}
+                <tr><td><b>{{ i.invoice_number }}</b></td><td>{{ i.customer_name }}</td><td>Rs. {{ "%.2f"|format(i.total_taxable_value|default(0)) }}</td><td>Rs. {{ "%.2f"|format(i.total_amount|default(0)) }}</td></tr>
+                {% else %}<tr><td colspan="4" style="text-align:center;">No permitted invoice records.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if role in ['Owner', 'Admin', 'Production Supervisor', 'Statutory Auditor'] %}
+<div class="ff-card">
+    <h4>Finished Goods Stock Report</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead><tr><th>Product ID</th><th>Product</th><th>Available Stock</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in products %}
+            <tr><td><b>{{ p.product_id }}</b></td><td>{{ p.name }}</td><td>{{ p.stock_qty|default(0) }} packets</td><td>{{ p.status }}</td></tr>
+            {% else %}<tr><td colspan="4" style="text-align:center;">No finished goods records.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if role in ['Owner', 'Admin', 'Production Supervisor', 'Statutory Auditor'] %}
+<div class="ff-col-2">
+    <div class="ff-card">
+        <h4>Production and Wastage Report</h4>
+        <div class="ff-table-wrapper">
+            <table class="ff-table">
+                <thead><tr><th>Production ID</th><th>Product</th><th>Planned</th><th>Actual</th><th>Wastage</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for o in production_orders %}
+                <tr><td><b>{{ o.production_id }}</b></td><td>{{ o.product_name }}</td><td>{{ o.planned_quantity }}</td><td>{{ o.actual_quantity|default('-') }}</td><td>{{ o.wastage_quantity|default(0) }}</td><td>{{ o.status }}</td></tr>
+                {% else %}<tr><td colspan="6" style="text-align:center;">No production records.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="ff-card">
+        <h4>Raw Material Stock Report</h4>
+        <div class="ff-table-wrapper">
+            <table class="ff-table">
+                <thead><tr><th>Material</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for m in materials %}
+                <tr><td>{{ m.name }}</td><td>{{ "%.2f"|format(m.stock_qty|default(0)) }} {{ m.unit }}</td><td>{{ "%.2f"|format(m.min_stock_level|default(0)) }} {{ m.unit }}</td><td>{% if m in low_stock %}Low Stock{% else %}Available{% endif %}</td></tr>
+                {% else %}<tr><td colspan="4" style="text-align:center;">No raw material records.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if role in ['Owner', 'Admin'] %}
+<div class="ff-card">
+    <h4>Outstanding Payment Report</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead><tr><th>Payment Reference</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in payments %}
+            <tr><td><b>{{ p.transaction_ref|default(p.payment_id) }}</b></td><td>{{ p.customer_name }}</td><td>Rs. {{ "%.2f"|format(p.amount|default(0)) }}</td><td>{{ p.status|default('Confirmed') }}</td></tr>
+            {% else %}<tr><td colspan="4" style="text-align:center;">No payment records.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+{% if role in ['Owner', 'Statutory Auditor'] %}
+<div class="ff-card">
+    <h4>System Activity Log</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead><tr><th>Timestamp</th><th>User</th><th>Role</th><th>Action</th><th>Details</th></tr></thead>
+            <tbody>
+            {% for log in activity_logs %}
+            <tr><td>{{ log.timestamp }}</td><td>{{ log.user_id }}</td><td>{{ log.user_role }}</td><td>{{ log.action }}</td><td>{{ log.details }}</td></tr>
+            {% else %}<tr><td colspan="5" style="text-align:center;">No recorded activity.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

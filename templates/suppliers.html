@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Supplier Master{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Supplier Master</h2>
+    <div class="ff-header-sub">Raw material vendors, flour mills, oil refineries, and packaging converters directory.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('suppliers', tab='directory') }}" class="ff-tab-btn {% if active_tab == 'directory' %}active{% endif %}">Vendor Directory</a>
+    {% if can_edit %}
+    <a href="{{ url_for('suppliers', tab='add') }}" class="ff-tab-btn {% if active_tab == 'add' %}active{% endif %}">Register Vendor</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'directory' %}
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Registered Vendor Entities ({{ suppliers|length }})</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Vendor Code</th>
+                <th>Entity Name</th>
+                <th>Telephone</th>
+                <th>Email</th>
+                <th>GSTIN</th>
+                <th>Supplied Materials</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in suppliers %}
+            <tr>
+                <td><b>{{ s.supplier_id }}</b></td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.phone }}</td>
+                <td>{{ s.email }}</td>
+                <td>{{ s.gstin }}</td>
+                <td>{{ s.supplied_materials }}</td>
+                <td><span class="ff-badge {% if s.status == 'Active' %}ff-badge-active{% else %}ff-badge-inactive{% endif %}">{{ s.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% elif active_tab == 'add' and can_edit %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Register Vendor Entity</h4>
+    <form method="POST" action="{{ url_for('add_supplier_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Vendor Code (Required) *</label>
+                <input type="text" name="supplier_id" placeholder="e.g. SUP-004" required>
+
+                <label>Commercial Name *</label>
+                <input type="text" name="name" placeholder="e.g. Malabar Spice Traders" required>
+
+                <label>Telephone Number *</label>
+                <input type="text" name="phone" placeholder="e.g. 9841029384" required>
+
+                <label>Commercial Email</label>
+                <input type="email" name="email" placeholder="e.g. sales@malabarspice.com">
+            </div>
+            <div>
+                <label>GSTIN Identification *</label>
+                <input type="text" name="gstin" placeholder="e.g. 33AAAAA9999A1Z2" required>
+
+                <label>Supplied Materials *</label>
+                <input type="text" name="supplied_materials" placeholder="e.g. Chilli Powder, Cumin, Hing" required>
+
+                <label>Status</label>
+                <select name="status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <label>Godown / Depot Address</label>
+        <textarea name="address" rows="2" placeholder="Industrial area, State, PIN..."></textarea>
+
+        <div style="margin-top: 10px;">
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Commit Vendor to Database</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

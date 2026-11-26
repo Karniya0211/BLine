@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLine - User Authentication</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background-color: #eef1f4; display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+    <div style="width: 100%; max-width: 440px; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" width="240" alt="BLine">
+            <div style="margin-top: 10px; border-bottom: 1px solid #d1d5db; padding-bottom: 12px;">
+                <div style="color: #111827; font-size: 18px; font-weight: 700;">Factory Operations Portal</div>
+                <div style="color: #4b5563; font-size: 13px;">South Indian Snacks Manufacturing ERP</div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="ff-alert ff-alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="ff-card">
+            <div class="ff-tabs">
+                <a href="{{ url_for('login', tab='auth') }}" class="ff-tab-btn {% if active_tab == 'auth' %}active{% endif %}">User Authentication</a>
+                <a href="{{ url_for('login', tab='reset') }}" class="ff-tab-btn {% if active_tab == 'reset' %}active{% endif %}">Password Reset</a>
+                <a href="{{ url_for('login', tab='account') }}" class="ff-tab-btn {% if active_tab == 'account' %}active{% endif %}">Create an Account</a>
+            </div>
+
+            {% if active_tab == 'auth' %}
+                <form method="POST" action="{{ url_for('login_post') }}">
+                    <label>Enterprise Email</label>
+                    <input type="email" name="email" placeholder="user@BLine.com" required>
+
+                    <label>Password</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input id="login-password" type="password" name="password" required style="margin-bottom:0;">
+                        <button type="button" class="ff-btn" onclick="togglePassword('login-password', this)">Show</button>
+                    </div>
+
+                    <div style="margin-top: 14px;">
+                        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Authenticate Session</button>
+                    </div>
+                </form>
+
+            {% elif active_tab == 'reset' %}
+                <form method="POST" action="{{ url_for('reset_password_post') }}">
+                    <label>Registered Enterprise Email</label>
+                    <input type="email" name="reset_email" placeholder="user@BLine.com" required>
+
+                    <div style="margin-top: 14px;">
+                        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Email Verification Code</button>
+                    </div>
+                </form>
+
+            {% elif active_tab == 'verify' %}
+                <form method="POST" action="{{ url_for('verify_reset_code') }}">
+                    <label>Email Verification Code</label>
+                    <input inputmode="numeric" name="code" maxlength="6" required>
+                    <label>New Password</label>
+                    <div style="display:flex; gap:8px; align-items:center;"><input id="new-password" type="password" name="password" minlength="8" required style="margin-bottom:0;"><button type="button" class="ff-btn" onclick="togglePassword('new-password', this)">Show</button></div>
+                    <label>Confirm New Password</label>
+                    <div style="display:flex; gap:8px; align-items:center;"><input id="confirm-password" type="password" name="confirm_password" minlength="8" required style="margin-bottom:0;"><button type="button" class="ff-btn" onclick="togglePassword('confirm-password', this)">Show</button></div>
+                    <div style="margin-top: 14px;"><button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Verify Code & Reset Password</button></div>
+                </form>
+
+            {% elif active_tab == 'account' %}
+                <form method="POST" action="{{ url_for('create_account_post') }}">
+                    <label>Full Name</label>
+                    <input type="text" name="name" placeholder="e.g. S. Karthikeyan" required>
+
+                    <label>Enterprise Email</label>
+                    <input type="email" name="email" placeholder="employee@BLine.com" required>
+
+                    <label>Select Role</label>
+                    <select name="role" required>
+                        {% for role in account_roles %}
+                        <option value="{{ role }}">{{ {'Admin': 'Admin', 'Owner': 'Owner', 'Production Supervisor': 'Supervisor', 'Sales Representative': 'Sales', 'Statutory Auditor': 'Auditor'}[role] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="status" value="Active">
+
+                    <div style="margin-top: 14px;">
+                        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Create Account</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+
+        <div style="text-align: center; color: #6b7280; font-size: 11px; margin-top: 20px; border-top: 1px solid #d1d5db; padding-top: 12px;">
+            BLine ERP v1.0.0 | Internal Industrial Deployment<br>
+            Governed by Industrial Compliance Terms and DPDP Act, 2023
+        </div>
+    </div>
+    <script>
+        function togglePassword(fieldId, button) {
+            const field = document.getElementById(fieldId);
+            const show = field.type === 'password';
+            field.type = show ? 'text' : 'password';
+            button.textContent = show ? 'Hide' : 'Show';
+        }
+    </script>
+</body>
+</html>

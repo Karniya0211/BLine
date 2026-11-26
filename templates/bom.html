@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Bill of Materials{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Bill of Materials (BOM)</h2>
+    <div class="ff-header-sub">Formulation recipes, raw material consumption standards per finished unit, and batch feasibility calculations.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('bom', tab='directory') }}" class="ff-tab-btn {% if active_tab == 'directory' %}active{% endif %}">BOM Formulations</a>
+    {% if can_manage %}
+    <a href="{{ url_for('bom', tab='create') }}" class="ff-tab-btn {% if active_tab == 'create' %}active{% endif %}">Create / Update Recipe</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'create' and can_manage %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Configure Standard Bill of Materials</h4>
+    <p style="font-size: 13px; color: #5f6d7a; margin-bottom: 16px;">
+        Define the exact raw material quantities required to produce 1 finished unit of snack.
+    </p>
+    <form method="POST" action="{{ url_for('save_bom_post') }}">
+        <div style="margin-bottom: 14px;">
+            <label>Finished Product *</label>
+            <select name="product_id" required>
+                {% for p in products %}
+                <option value="{{ p.product_id }}">{{ p.name }} (SKU: {{ p.sku }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <h5 style="font-size: 13px; font-weight: 600; color: #141e28; margin: 16px 0 8px 0; border-bottom: 1px solid #e1e6eb; padding-bottom: 4px;">
+            Required Ingredients per Unit
+        </h5>
+        
+        <div style="display: grid; gap: 8px; margin-bottom: 16px;">
+            {% for i in range(5) %}
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                <div>
+                    <select name="material_id">
+                        <option value="">-- None / Select Raw Material --</option>
+                        {% for m in materials %}
+                        <option value="{{ m.material_id }}">{{ m.name }} ({{ m.unit }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <input type="number" step="0.001" min="0" name="quantity_per_unit" placeholder="Qty per finished unit">
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Save Bill of Materials</button>
+    </form>
+</div>
+{% else %}
+<div class="ff-grid-2" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 16px; margin-bottom: 20px;">
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Select Finished Product Formulation</h4>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            {% for b in boms %}
+            <a href="{{ url_for('bom', product_id=b.product_id) }}" 
+               class="ff-nav-item {% if selected and selected.product_id == b.product_id %}active{% endif %}" 
+               style="background: #f8f9fa; border: 1px solid #e1e6eb; border-radius: 4px; padding: 10px 14px; text-decoration: none; color: #141e28; font-size: 13px; display: block;">
+                <strong>{{ b.product_name }}</strong><br>
+                <small style="color: #5f6d7a;">{{ b.materials|length }} raw material ingredients</small>
+            </a>
+            {% else %}
+            <p style="color: #5f6d7a; font-size: 13px;">No active BOM recipes registered.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="ff-card">
+        {% if selected %}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 15px;">Recipe: {{ selected.product_name }}</h4>
+            <span class="ff-badge ff-badge-active">Standard Formulation</span>
+        </div>
+        <p style="font-size: 13px; color: #5f6d7a; margin-bottom: 12px;">
+            Standard raw materials consumed per 1 package/unit:
+        </p>
+        <div class="ff-table-wrapper">
+            <table class="ff-table">
+                <thead>
+                    <tr>
+                        <th>Material Item</th>
+                        <th style="text-align: right;">Quantity Per Unit</th>
+                        <th>Standard Unit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in selected.materials %}
+                    <tr>
+                        <td><b>{{ item.material_name }}</b></td>
+                        <td style="text-align: right; font-weight: 600;">{{ item.required_per_unit }}</td>
+                        <td>{{ item.unit }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: #5f6d7a; font-size: 13px; text-align: center; padding: 30px 0;">
+            Select a product from the list to view its Bill of Materials and formulation rates.
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

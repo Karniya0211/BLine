@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}Operations Dashboard{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Manufacturing Operations Dashboard</h2>
+    <div class="ff-header-sub">Active Session: {{ session.get('user_name') }} | Role: {{ session.get('user_role') }} | Facility: Unit 1 (Chennai)</div>
+</div>
+
+<!-- 5 Metric Cards Ribbon -->
+<div class="ff-metric-grid-5">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Finished Goods SKUs</div>
+        <div class="ff-metric-num">{{ metrics.total_products }}</div>
+        <div class="ff-metric-note">Murukku, Mixture, Chips, Sweets</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Active Accounts</div>
+        <div class="ff-metric-num">{{ metrics.total_customers }}</div>
+        <div class="ff-metric-note">Wholesale and Retailer roster</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Registered Vendors</div>
+        <div class="ff-metric-num">{{ metrics.total_suppliers }}</div>
+        <div class="ff-metric-note">Raw material and packaging</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Inventory Items</div>
+        <div class="ff-metric-num">{{ metrics.total_raw_materials }}</div>
+        <div class="ff-metric-note">Ingredients and consumables</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Authorized Users</div>
+        <div class="ff-metric-num">{{ metrics.total_users }}</div>
+        <div class="ff-metric-note">Staff and audit accounts</div>
+    </div>
+</div>
+
+<h4 style="margin:16px 0 10px 0;font-size:14px;">Phase 3 Production and Inventory</h4>
+<div class="ff-metric-grid-5">
+    <div class="ff-metric-panel"><div class="ff-metric-label">Production Orders</div><div class="ff-metric-num">{{ metrics.total_production_orders }}</div><div class="ff-metric-note">All production batches</div></div>
+    <div class="ff-metric-panel"><div class="ff-metric-label">Pending Production</div><div class="ff-metric-num">{{ metrics.pending_production_orders }}</div><div class="ff-metric-note">Pending and in progress</div></div>
+    <div class="ff-metric-panel"><div class="ff-metric-label">Completed Production</div><div class="ff-metric-num">{{ metrics.completed_production_orders }}</div><div class="ff-metric-note">Completed batches</div></div>
+    <div class="ff-metric-panel"><div class="ff-metric-label">Finished Goods Stock</div><div class="ff-metric-num">{{ metrics.total_finished_goods_stock }}</div><div class="ff-metric-note">Packets available</div></div>
+    <div class="ff-metric-panel"><div class="ff-metric-label">Low Stock Materials</div><div class="ff-metric-num">{{ metrics.low_stock_materials }}</div><div class="ff-metric-note">At or below reorder level</div></div>
+</div>
+
+{% if recent_production %}
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead><tr><th>Production ID</th><th>Product</th><th>Quantity</th><th>Status</th><th>Progress</th></tr></thead>
+        <tbody>{% for o in recent_production %}
+        <tr><td><b>{{ o.production_id }}</b></td><td>{{ o.product_name }}</td><td>{{ o.planned_quantity }}</td><td>{{ o.status }}</td><td>{{ o.progress_percent|default(0) }}%</td></tr>
+        {% endfor %}</tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Role-Specific Panes -->
+{% if session.get('user_role') == 'Owner' %}
+<div class="ff-card" style="margin: 16px 0;">
+    <h4 style="margin:0 0 12px;font-size:15px;">Create Employee Account</h4>
+    <form method="POST" action="{{ url_for('create_user_post') }}">
+        <div class="ff-col-2"><div>
+            <label>Full Name *</label><input name="name" required>
+            <label>Email Address *</label><input type="email" name="email" required>
+        </div><div>
+            <label>Phone Number *</label><input name="phone" required>
+            <label>Assign Role *</label><select name="role">{% for role in all_roles %}<option value="{{ role }}">{{ {'Admin': 'Admin', 'Owner': 'Owner', 'Production Supervisor': 'Supervisor', 'Sales Representative': 'Sales', 'Statutory Auditor': 'Auditor'}[role] }}</option>{% endfor %}</select>
+            <input type="hidden" name="status" value="Active">
+        </div></div>
+        <button class="ff-btn ff-btn-primary" type="submit">Create Employee Account</button>
+    </form>
+</div>
+<h4 style="margin: 16px 0 10px 0; font-size: 14px;">Financial and Production Consolidation</h4>
+<div class="ff-metric-grid-4">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Gross Order Target</div>
+        <div class="ff-metric-num">Rs. 4,85,200</div>
+        <div class="ff-metric-note">Current month target</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Finished Volume MTD</div>
+        <div class="ff-metric-num">12,450 kg</div>
+        <div class="ff-metric-note">Combined snacks output</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Material Invoiced</div>
+        <div class="ff-metric-num">Rs. 2,30,100</div>
+        <div class="ff-metric-note">Grains, oils, and packaging</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Accounts Receivable</div>
+        <div class="ff-metric-num">Rs. 82,400</div>
+        <div class="ff-metric-note">Pending customer realization</div>
+    </div>
+</div>
+
+{% elif session.get('user_role') == 'Sales Representative' %}
+<h4 style="margin: 16px 0 10px 0; font-size: 14px;">Territory Sales Performance</h4>
+<div class="ff-metric-grid-4">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Assigned Territory Accounts</div>
+        <div class="ff-metric-num">{{ metrics.total_customers }}</div>
+        <div class="ff-metric-note">South zone retail network</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Daily Order Target</div>
+        <div class="ff-metric-num">Rs. 25,000</div>
+        <div class="ff-metric-note">Direct wholesale bookings</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Pending Dispatch Orders</div>
+        <div class="ff-metric-num">8 Orders</div>
+        <div class="ff-metric-note">Awaiting packaging release</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Active Pricing Tier</div>
+        <div class="ff-metric-num">Standard</div>
+        <div class="ff-metric-note">GST 5% included</div>
+    </div>
+</div>
+
+{% elif session.get('user_role') == 'Production Supervisor' %}
+<h4 style="margin: 16px 0 10px 0; font-size: 14px;">Shop Floor and Batch Operations</h4>
+<div class="ff-metric-grid-4">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Active Production Lines</div>
+        <div class="ff-metric-num">4 Batches</div>
+        <div class="ff-metric-note">Murukku press and fryer lines</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Refined Oil Allocation</div>
+        <div class="ff-metric-num">420 Litres</div>
+        <div class="ff-metric-note">In-process frying inventory</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Pouch Stock Balance</div>
+        <div class="ff-metric-num">8,200 Units</div>
+        <div class="ff-metric-note">200g printed rolls available</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Plant Efficiency</div>
+        <div class="ff-metric-num">98.4%</div>
+        <div class="ff-metric-note">Daily production uptime</div>
+    </div>
+</div>
+
+{% elif session.get('user_role') == 'Statutory Auditor' %}
+<div class="ff-alert ff-alert-info">
+    Statutory Auditor Mode Active: Master HSN classifications, GSTIN validation records, and audit logs are accessible for read-only verification.
+</div>
+{% endif %}
+
+<!-- Charts -->
+<div class="ff-col-2">
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Product Line Distribution</h4>
+        <div id="chart-product-dist" style="height: 280px;"></div>
+    </div>
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Customer Account Distribution</h4>
+        <div id="chart-cust-dist" style="height: 280px;"></div>
+    </div>
+</div>
+
+<div class="ff-card">
+    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Raw Material Benchmark Purchase Rates</h4>
+    <div id="chart-mat-rates" style="height: 300px;"></div>
+</div>
+
+<!-- Phase 3 Production & Inventory Metrics -->
+<h4 style="margin: 18px 0 10px 0; font-size: 15px;">Production & Warehouse Status</h4>
+<div class="ff-metric-grid-4">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Total Production Batches</div>
+        <div class="ff-metric-num">{{ metrics.total_production_orders }}</div>
+        <div class="ff-metric-note">{{ metrics.pending_production_orders }} active / in progress</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Completed Batches</div>
+        <div class="ff-metric-num">{{ metrics.completed_production_orders }}</div>
+        <div class="ff-metric-note">Finished production runs</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Finished Goods Stock</div>
+        <div class="ff-metric-num">{{ metrics.total_finished_goods_stock }} Units</div>
+        <div class="ff-metric-note">Ready for customer dispatch</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Raw Material Low Stock</div>
+        <div class="ff-metric-num" {% if metrics.low_stock_materials > 0 %}style="color: #c5221f;"{% endif %}>
+            {{ metrics.low_stock_materials }} Items
+        </div>
+        <div class="ff-metric-note">Below safety threshold</div>
+    </div>
+</div>
+
+{% if recent_production %}
+<div class="ff-card" style="margin-top: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h4 style="margin: 0; font-size: 14px;">Recent Production Orders</h4>
+        <a href="{{ url_for('production') }}" class="ff-btn" style="padding: 2px 8px; font-size: 12px;">View All</a>
+    </div>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Batch ID</th>
+                    <th>Product</th>
+                    <th>Planned Qty</th>
+                    <th>Actual Qty</th>
+                    <th>Status</th>
+                    <th>Progress</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in recent_production %}
+                <tr>
+                    <td><b>{{ p.production_id }}</b></td>
+                    <td>{{ p.product_name }}</td>
+                    <td>{{ p.planned_quantity }}</td>
+                    <td>{{ p.actual_quantity|default('-') }}</td>
+                    <td>
+                        <span class="ff-badge {% if p.status == 'Completed' %}ff-badge-active{% elif p.status == 'Cancelled' %}ff-badge-inactive{% else %}ff-badge-role{% endif %}">
+                            {{ p.status }}
+                        </span>
+                    </td>
+                    <td>{{ p.progress_percent|default(0) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- 2 Recent Tables -->
+<h4 style="margin: 18px 0 10px 0; font-size: 15px;">Master Log and Recent Entries</h4>
+<div class="ff-col-2">
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>SKU Code</th>
+                    <th>Product Name</th>
+                    <th>Line</th>
+                    <th>Rate (INR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in recent_products %}
+                <tr>
+                    <td><b>{{ p.product_id }}</b></td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.category }}</td>
+                    <td>Rs. {{ "%.2f"|format(p.selling_price) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Account Code</th>
+                    <th>Entity Name</th>
+                    <th>Channel</th>
+                    <th>State</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in recent_customers %}
+                <tr>
+                    <td><b>{{ c.customer_id }}</b></td>
+                    <td>{{ c.name }}</td>
+                    <td>{{ c.customer_type }}</td>
+                    <td>{{ c.state }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    var pData = {{ product_cat_data | tojson }};
+    Plotly.newPlot('chart-product-dist', [{
+        labels: pData.labels,
+        values: pData.values,
+        type: 'pie',
+        hole: 0.4,
+        marker: { colors: ['#1f4e5b', '#2c6e80', '#457b9d', '#3d5a80', '#293241'] }
+    }], {
+        margin: { t: 15, b: 15, l: 15, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+
+    var cData = {{ customer_type_data | tojson }};
+    Plotly.newPlot('chart-cust-dist', [{
+        x: cData.names,
+        y: cData.values,
+        type: 'bar',
+        marker: { color: ['#2c6e80', '#1f4e5b'] }
+    }], {
+        margin: { t: 15, b: 25, l: 40, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+
+    var mData = {{ material_rate_data | tojson }};
+    Plotly.newPlot('chart-mat-rates', [{
+        x: mData.names,
+        y: mData.values,
+        type: 'bar',
+        text: mData.values.map(v => 'Rs. ' + v.toFixed(2)),
+        textposition: 'outside',
+        marker: { color: ['#1f4e5b', '#2c6e80', '#457b9d', '#3d5a80'] }
+    }], {
+        margin: { t: 25, b: 25, l: 40, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+</script>
+{% endblock %}

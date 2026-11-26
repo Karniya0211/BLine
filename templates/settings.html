@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>System Settings & Cloud Infrastructure</h2>
+    <div class="ff-header-sub">Operational Environment Diagnostics</div>
+</div>
+
+<div class="ff-col-2">
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Cloud Firestore Cluster Status</h4>
+        {% if mode == 'firebase' %}
+            <div class="ff-alert ff-alert-success">Google Cloud Firestore: Connected and Operating</div>
+            <div style="font-size: 12px; margin-top: 6px;"><b>Project ID:</b> <code>{{ creds.project_id if creds else 'Unknown' }}</code></div>
+            <div style="font-size: 12px; margin-top: 4px;"><b>Client Email:</b> <code>{{ creds.client_email if creds else 'Unknown' }}</code></div>
+        {% else %}
+            <div class="ff-alert ff-alert-info">Local In-Memory Persistence: Active</div>
+            <div style="font-size: 12px; color: #4b5563;">
+                Running in local high-fidelity development mode with full CRUD support for Murukku, Mixture, Chips, and Sweets.
+                {% if database_status and database_status.reason %}
+                Current integration issue: {{ database_status.reason }}.
+                {% endif %}
+                Place the service-account JSON file at the path configured in .env or set FIREBASE_SERVICE_ACCOUNT_PATH and restart the app.
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Identity and Access Management (Firebase Auth)</h4>
+        {% if web_api_key and not web_api_key.startswith('AIzaSySample') %}
+            <div class="ff-alert ff-alert-success">Firebase Authentication REST API: Active</div>
+            <div style="font-size: 12px; margin-top: 6px;"><b>API Key Signature:</b> <code>{{ web_api_key[:8] }}...</code></div>
+        {% else %}
+            <div class="ff-alert ff-alert-info">Local Enterprise Staff Roster: Active</div>
+            <div style="font-size: 12px; color: #4b5563;">
+                Pre-seeded with Owner, Admin, Sales Representative, Production Supervisor, and Statutory Auditor accounts.
+                Set FIREBASE_WEB_API_KEY in .env to engage live token exchange.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<hr>
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Manufacturing Facility Metadata</h4>
+<div class="ff-metric-grid-4">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Plant Location</div>
+        <div class="ff-metric-num">Chennai, TN</div>
+        <div class="ff-metric-note">Unit 1 Primary Facility</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Installed Capacity</div>
+        <div class="ff-metric-num">15,000 kg/mo</div>
+        <div class="ff-metric-note">Murukku & Chips Line</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Primary HSN Codes</div>
+        <div class="ff-metric-num">1905, 2008, 2106</div>
+        <div class="ff-metric-note">Standard 5% Food GST</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Compliance Standard</div>
+        <div class="ff-metric-num">FSSAI & GSTN</div>
+        <div class="ff-metric-note">Statutory Audit Ready</div>
+    </div>
+</div>
+{% endblock %}

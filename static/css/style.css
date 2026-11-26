@@ -1,0 +1,387 @@
+/*
+Industrial, professional manufacturing ERP styling for FactoryFlow.
+Exact preservation of Streamlit theme:
+- Deep Slate Navy Sidebar (#141e28)
+- Muted Cool Grey Background (#eef1f4)
+- Clean Warm Off-White Panels (#f8f9fa)
+- Deep Spruce Teal Primary Buttons (#0b645b), Hover (#084c45)
+- Segoe UI / System typography
+- Crisp 2-3px radius borders, no harsh gradients, no drop shadows, no emojis
+*/
+
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #eef1f4;
+    color: #111827;
+    height: 100%;
+}
+
+.ff-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Enterprise Slate Sidebar */
+.ff-sidebar {
+    width: 260px;
+    background-color: #141e28;
+    border-right: 1px solid #283747;
+    color: #d5dbe1;
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.ff-sidebar-brand {
+    margin-bottom: 12px;
+}
+
+.ff-sidebar-user {
+    padding: 10px 0 14px 0;
+    border-bottom: 1px solid #283747;
+    margin-bottom: 14px;
+}
+
+.ff-user-name {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.ff-user-email {
+    color: #94a3b8;
+    font-size: 11px;
+    margin-top: 1px;
+}
+
+.ff-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+.ff-badge-role {
+    background-color: #e8eaed;
+    color: #202124;
+    border-color: #dadce0;
+}
+
+.ff-badge-active {
+    background-color: #e6f4ea;
+    color: #137333;
+    border-color: #ceead6;
+}
+
+.ff-badge-inactive {
+    background-color: #fce8e6;
+    color: #c5221f;
+    border-color: #fad2cf;
+}
+
+.ff-nav-title {
+    color: #8392a5;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+}
+
+.ff-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-grow: 1;
+}
+
+.ff-nav-item {
+    display: block;
+    background-color: #1a2734;
+    color: #d5dbe1;
+    text-decoration: none;
+    border-radius: 3px;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid #283747;
+}
+
+.ff-nav-item:hover {
+    background-color: #223242;
+    color: #ffffff;
+    border-color: #3b4e61;
+}
+
+.ff-nav-item.active {
+    background-color: #0b645b;
+    color: #ffffff;
+    border-color: #084c45;
+    font-weight: 600;
+}
+
+.ff-sidebar-footer {
+    margin-top: 24px;
+    font-size: 11px;
+    color: #6c7d93;
+    border-top: 1px solid #283747;
+    padding-top: 12px;
+}
+
+/* Main Content Surface */
+.ff-main {
+    flex-grow: 1;
+    padding: 24px 32px;
+    overflow-y: auto;
+}
+
+/* Page Header */
+.ff-header {
+    border-bottom: 1px solid #d1d5db;
+    padding-bottom: 10px;
+    margin-bottom: 18px;
+}
+
+.ff-header h2 {
+    color: #111827;
+    margin: 0 0 4px 0;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.ff-header-sub {
+    color: #4b5563;
+    font-size: 13px;
+}
+
+/* Flat Metric Panels */
+.ff-metric-grid-6 {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ff-metric-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ff-metric-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ff-metric-panel {
+    background: #f8f9fa;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    padding: 14px 16px;
+}
+
+.ff-metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4b5563;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.ff-metric-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.ff-metric-note {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 3px;
+}
+
+/* Two-column layout */
+.ff-col-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+/* Forms & Inputs */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 3px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #111827;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #0b645b;
+}
+
+label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Solid Buttons */
+.ff-btn {
+    display: inline-block;
+    padding: 7px 16px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    color: #111827;
+}
+
+.ff-btn-primary {
+    background-color: #0b645b !important;
+    color: #ffffff !important;
+    border-color: #084c45 !important;
+}
+
+.ff-btn-primary:hover {
+    background-color: #084c45 !important;
+}
+
+.ff-btn-block {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+/* Enterprise Tables */
+.ff-table-wrapper {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+table.ff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: left;
+}
+
+table.ff-table th {
+    background-color: #141e28;
+    color: #ffffff;
+    padding: 8px 12px;
+    font-weight: 600;
+    border-bottom: 1px solid #283747;
+}
+
+table.ff-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
+}
+
+table.ff-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Notification Banners */
+.ff-alert {
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-bottom: 14px;
+    border: 1px solid transparent;
+}
+
+.ff-alert-success {
+    background-color: #e6f4ea;
+    color: #137333;
+    border-color: #ceead6;
+}
+
+.ff-alert-error {
+    background-color: #fce8e6;
+    color: #c5221f;
+    border-color: #fad2cf;
+}
+
+.ff-alert-info {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    border-color: #d2e3fc;
+}
+
+.ff-alert-warning {
+    background-color: #fef7e0;
+    color: #b06000;
+    border-color: #feefc3;
+}
+
+/* Tab Navigation */
+.ff-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid #d1d5db;
+    margin-bottom: 14px;
+}
+
+.ff-tab-btn {
+    padding: 8px 14px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+}
+
+.ff-tab-btn.active {
+    background-color: #ffffff;
+    color: #111827;
+    border-color: #d1d5db;
+    margin-bottom: -1px;
+    border-bottom: 1px solid #ffffff;
+}
+
+.ff-card {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #d1d5db;
+    margin: 18px 0;
+}

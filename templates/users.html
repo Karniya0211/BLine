@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>User and Role Management</h2>
+    <div class="ff-header-sub">Staff access provisioning, role assignments, and authentication audit policies.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('users', tab='roster') }}" class="ff-tab-btn {% if active_tab == 'roster' %}active{% endif %}">Authorized User Roster</a>
+    <a href="{{ url_for('users', tab='create') }}" class="ff-tab-btn {% if active_tab == 'create' %}active{% endif %}">Create an Account</a>
+</div>
+
+{% if active_tab == 'roster' %}
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Authorized Staff Roster</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>System UID</th>
+                <th>Full Name</th>
+                <th>Enterprise Email</th>
+                <th>Assigned System Role</th>
+                <th>Account Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users_list %}
+            <tr>
+                <td><b>{{ u.uid }}</b></td>
+                <td>{{ u.name }}</td>
+                <td>{{ u.email }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('update_user_role_post') }}" style="display:flex;gap:6px;">
+                        <input type="hidden" name="email" value="{{ u.email }}">
+                        <select name="role" style="margin-bottom:0;max-width:220px;">
+                            {% for r in all_roles %}
+                            <option value="{{ r }}" {% if r == u.role %}selected{% endif %}>{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="ff-btn">Update</button>
+                    </form>
+                </td>
+                <td><span class="ff-badge ff-badge-active">{{ u.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<hr>
+<h4 style="margin: 0 0 8px 0; font-size: 14px;">Role Authority Matrix</h4>
+<div style="font-size: 12px; color: #374151; line-height: 1.6;">
+    <div>1. <b>Owner:</b> Unrestricted authority across production output, financials, inventory, and audit logs.</div>
+    <div>2. <b>Admin:</b> Master records administration, vendor/client onboarding, and staff credential management.</div>
+    <div>3. <b>Sales Representative:</b> Territory account operations, finished goods price schedules, and customer portfolios.</div>
+    <div>4. <b>Production Supervisor:</b> Shop floor execution, line recipes, ingredient safety stocks, and packing buffer levels.</div>
+    <div>5. <b>Statutory Auditor:</b> Read-only compliance inspection across all master documents and tax identification codes.</div>
+</div>
+
+{% elif active_tab == 'create' %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Create an Account</h4>
+    <form method="POST" action="{{ url_for('create_user_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Full Legal Name *</label>
+                <input type="text" name="name" placeholder="e.g. S. Karthikeyan" required>
+
+                <label>Enterprise Work Email *</label>
+                <input type="email" name="email" placeholder="e.g. karthik@BLine.com" required>
+
+                <label>Phone Number *</label>
+                <input type="tel" name="phone" placeholder="e.g. 9876543210" required>
+            </div>
+            <div>
+                <label>Assigned System Role *</label>
+                <select name="role">
+                    {% for r in all_roles %}
+                            <option value="{{ r }}">{{ {'Admin': 'Admin', 'Owner': 'Owner', 'Production Supervisor': 'Supervisor', 'Sales Representative': 'Sales', 'Statutory Auditor': 'Auditor'}[r] }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Initial Status</label>
+                <select name="status">
+                    <option value="Active">Active</option>
+                    <option value="Suspended">Suspended</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="font-size: 11px; color: #6b7280; margin-bottom: 10px;">
+            Accounts are provisioned under Google Cloud Firestore users collection linked to Firebase Authentication.
+        </div>
+
+        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Commit User Provisioning</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

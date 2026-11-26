@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Dispatch Management{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Warehouse Dispatch Management</h2>
+    <div class="ff-header-sub">Outward gate pass execution, finished goods stock deduction, and statutory stock ledger recording.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('dispatch', tab='gatepass') }}" class="ff-tab-btn {% if active_tab == 'gatepass' %}active{% endif %}">Outward Gate Pass & Dispatch</a>
+    <a href="{{ url_for('dispatch', tab='ledger') }}" class="ff-tab-btn {% if active_tab == 'ledger' %}active{% endif %}">Finished Stock Ledger</a>
+</div>
+
+{% if active_tab == 'gatepass' %}
+    {% if pending_invoices %}
+    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Pending Invoices Awaiting Outward Dispatch</h4>
+    <form method="GET" action="{{ url_for('dispatch') }}" style="margin-bottom: 16px;">
+        <input type="hidden" name="tab" value="gatepass">
+        <label>Select Target Invoice *</label>
+        <select name="invoice_number" onchange="this.form.submit()">
+            {% for inv in pending_invoices %}
+            <option value="{{ inv.invoice_number }}" {% if inv.invoice_number == target_inv.invoice_number %}selected{% endif %}>
+                {{ inv.invoice_number }} : {{ inv.customer_name }} (Order: {{ inv.order_id }}) - Status: {{ inv.dispatch_status }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <div style="background: #ffffff; border: 1px solid #d1d5db; padding: 12px; border-radius: 3px; font-size: 12px; margin-bottom: 14px;">
+        <div><b>Invoice No:</b> {{ target_inv.invoice_number }} | <b>Invoice Date:</b> {{ target_inv.invoice_date }} | <b>Order Ref:</b> {{ target_inv.order_id }}</div>
+        <div><b>Consignee:</b> {{ target_inv.customer_name }} | <b>Destination:</b> {{ target_inv.customer_state }}</div>
+        <div><b>Delivery Address:</b> {{ target_inv.customer_address or 'N/A' }}</div>
+    </div>
+
+    <form method="POST" action="{{ url_for('confirm_dispatch_post') }}">
+        <input type="hidden" name="invoice_number" value="{{ target_inv.invoice_number }}">
+        <h5 style="margin: 0 0 8px 0; font-size: 13px;">Outward Item Quantity Allocation</h5>
+
+        <div class="ff-table-wrapper">
+            <table class="ff-table">
+                <thead>
+                    <tr>
+                        <th>Product & SKU</th>
+                        <th>Invoiced</th>
+                        <th>Previously Dispatched</th>
+                        <th>Pending Balance</th>
+                        <th>Warehouse Stock</th>
+                        <th>Dispatch Qty (This Gate Pass)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for it in dispatch_items_review %}
+                    <tr>
+                        <td><b>{{ it.name }}</b> ({{ it.product_id }})</td>
+                        <td>{{ it.invoiced_qty }}</td>
+                        <td>{{ it.already_dispatched }}</td>
+                        <td>{{ it.pending_qty }}</td>
+                        <td>
+                            {% if it.avail_stock >= it.pending_qty %}
+                                <span style="color:#137333; font-weight:600;">{{ it.avail_stock }} pkts (Sufficient)</span>
+                            {% else %}
+                                <span style="color:#c5221f; font-weight:600;">{{ it.avail_stock }} pkts (Shortage: {{ it.pending_qty - it.avail_stock }})</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="number" name="disp_qty_{{ it.product_id }}" min="0" max="{{ it.invoiced_qty }}" value="{{ it.recommended_qty }}" style="width: 120px; padding: 4px 8px; margin: 0;" required>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <hr>
+        <div class="ff-col-2">
+            <div>
+                <label>Dispatch Execution Date *</label>
+                <input type="date" name="dispatch_date" value="{{ today_str }}" required>
+
+                <label>Transport / Lorry Receipt (LR) No *</label>
+                <input type="text" name="transport_ref" placeholder="e.g. TN-LR-2026-8812" required>
+            </div>
+            <div>
+                <label>Transporter / Vehicle No *</label>
+                <input type="text" name="transporter_name" placeholder="e.g. VRL Logistics / TN 01 AB 1234" required>
+
+                <label>Gate Pass Remarks</label>
+                <input type="text" name="gate_pass_notes" placeholder="e.g. Inspected 150 cartons, seal intact...">
+            </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Confirm Outward Dispatch & Deduct Stock</button>
+        </div>
+    </form>
+
+    {% else %}
+    <div class="ff-alert ff-alert-info">
+        No pending invoices awaiting dispatch. All generated invoices have been fulfilled.
+    </div>
+    {% endif %}
+
+{% elif active_tab == 'ledger' %}
+    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Finished Goods Stock Movement Ledger</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Entry Ref</th>
+                    <th>Timestamp</th>
+                    <th>SKU</th>
+                    <th>Product Name</th>
+                    <th>Movement Type</th>
+                    <th>Change Qty</th>
+                    <th>Closing Balance</th>
+                    <th>Ref Document</th>
+                    <th>Staff ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in ledger|reverse %}
+                <tr>
+                    <td><b>{{ l.ledger_id }}</b></td>
+                    <td>{{ l.timestamp[:19] }}</td>
+                    <td>{{ l.product_id }}</td>
+                    <td>{{ l.product_name }}</td>
+                    <td><span class="ff-badge {% if l.change_qty > 0 %}ff-badge-active{% else %}ff-badge-role{% endif %}">{{ l.movement_type }}</span></td>
+                    <td><b>{{ l.change_qty }}</b></td>
+                    <td><b>{{ l.balance_qty }}</b></td>
+                    <td>{{ l.reference_id }}</td>
+                    <td>{{ l.user_id }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align:center; color:#6b7280; padding:16px;">No stock ledger transactions recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+{% endblock %}

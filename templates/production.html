@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Production Orders{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Production Orders</h2>
+    <div class="ff-header-sub">Production planning, progress, completion, and raw material consumption.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('production', tab='orders') }}" class="ff-tab-btn {% if active_tab == 'orders' %}active{% endif %}">Production Orders</a>
+    {% if can_manage %}
+    <a href="{{ url_for('production', tab='create') }}" class="ff-tab-btn {% if active_tab == 'create' %}active{% endif %}">Create Order</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'create' and can_manage %}
+<div class="ff-card">
+    <form method="POST" action="{{ url_for('create_production_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Finished Product *</label>
+                <select name="product_id" required>
+                    {% for p in products %}
+                    <option value="{{ p.product_id }}">{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+                <label>Production Quantity *</label>
+                <input type="number" name="quantity" min="1" step="1" value="100" required>
+                <label>Production Notes</label>
+                <textarea name="notes" rows="3"></textarea>
+            </div>
+            <div>
+                <label>Start Date *</label>
+                <input type="date" name="start_date" required>
+                <label>Expected Completion Date *</label>
+                <input type="date" name="expected_completion_date" required>
+            </div>
+        </div>
+        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Create Production Order</button>
+    </form>
+</div>
+{% else %}
+{% if approved_orders %}
+<h4 style="font-size:14px;">Approved Orders Requiring Production Review</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Quantity</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for o in approved_orders %}
+        <tr><td><b>{{ o.order_id }}</b></td><td>{{ o.customer_name }}</td><td>{{ o.total_quantity }}</td><td>{{ o.status }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+<form method="GET" action="{{ url_for('production') }}" style="margin-bottom:16px;">
+    <input type="hidden" name="tab" value="orders">
+    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; align-items:flex-end;">
+        <div><label>Search Production ID or Product</label><input type="text" name="search" value="{{ search }}"></div>
+        <div><label>Status</label><select name="status" onchange="this.form.submit()">
+            {% for status in statuses %}<option value="{{ status }}" {% if status == status_filter %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select></div>
+        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Filter</button>
+    </div>
+</form>
+
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead><tr><th>Production ID</th><th>Product</th><th>Planned Qty</th><th>Actual Qty</th><th>Start</th><th>Expected</th><th>Status</th><th>Progress</th><th>Details</th></tr></thead>
+        <tbody>
+        {% for o in orders %}
+        <tr>
+            <td><b>{{ o.production_id }}</b></td>
+            <td>{{ o.product_name }}</td>
+            <td>{{ o.planned_quantity }}</td>
+            <td>{{ o.actual_quantity|default('-') }}</td>
+            <td>{{ o.start_date }}</td>
+            <td>{{ o.expected_completion_date }}</td>
+            <td><span class="ff-badge {% if o.status == 'Completed' %}ff-badge-active{% elif o.status == 'Cancelled' %}ff-badge-inactive{% else %}ff-badge-role{% endif %}">{{ o.status }}</span></td>
+            <td>{{ o.progress_percent|default(0) }}%</td>
+            <td><a class="ff-btn" href="{{ url_for('production', view=o.production_id) }}" style="padding:2px 8px;">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center;">No production orders found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if selected %}
+<div class="ff-card">
+    <h4>Production Details: {{ selected.production_id }}</h4>
+    <p>{{ selected.product_name }} - Planned {{ selected.planned_quantity }}, Status {{ selected.status }}</p>
+    {% if requirements %}
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead><tr><th>Raw Material</th><th>Required</th><th>Available</th><th>Result</th></tr></thead>
+            <tbody>{% for r in requirements %}<tr><td>{{ r.material_name }}</td><td>{{ "%.2f"|format(r.required_quantity) }} {{ r.unit }}</td><td>{{ "%.2f"|format(r.available_quantity) }} {{ r.unit }}</td><td>{% if r.available %}Available{% else %}Shortage {{ "%.2f"|format(r.shortage) }}{% endif %}</td></tr>{% endfor %}</tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% if can_manage and selected.status != 'Completed' and selected.status != 'Cancelled' %}
+    <form method="POST" action="{{ url_for('edit_production_post') }}" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+        <input type="hidden" name="production_id" value="{{ selected.production_id }}">
+        <div><label>Planned Quantity</label><input type="number" name="planned_quantity" min="1" step="1" value="{{ selected.planned_quantity }}"></div>
+        <div><label>Start Date</label><input type="date" name="start_date" value="{{ selected.start_date }}"></div>
+        <div><label>Expected Completion</label><input type="date" name="expected_completion_date" value="{{ selected.expected_completion_date }}"></div>
+        <div style="align-self:end;"><button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Save Details</button></div>
+        <input type="hidden" name="notes" value="{{ selected.notes|default('') }}">
+    </form>
+    <form method="POST" action="{{ url_for('production_status_post') }}" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:10px;">
+        <input type="hidden" name="production_id" value="{{ selected.production_id }}">
+        <div><label>Status</label><select name="status"><option>Pending</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select></div>
+        <div><label>Progress (%)</label><input type="number" name="progress_percent" min="0" max="100" value="{{ selected.progress_percent|default(0) }}"></div>
+        <div><label>Actual Quantity</label><input type="number" name="actual_quantity" min="0" step="1" value="{{ selected.planned_quantity }}"></div>
+        <div><label>Wastage Quantity</label><input type="number" name="wastage_quantity" min="0" step="0.01" value="{{ selected.wastage_quantity|default(0) }}"></div>
+        <div style="align-self:end;"><button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Update</button></div>
+    </form>
+    <form method="POST" action="{{ url_for('delete_production_post') }}" style="margin-top:10px;">
+        <input type="hidden" name="production_id" value="{{ selected.production_id }}">
+        <button type="submit" class="ff-btn" style="border-color:#c5221f;color:#c5221f;">Delete Production Record</button>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

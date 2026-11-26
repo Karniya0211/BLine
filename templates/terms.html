@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Terms of Service & Privacy Policy</h2>
+    <div class="ff-header-sub">Effective Date: January 1, 2026 | Document Reference: FF-LEGAL-2026-V1</div>
+</div>
+
+<div class="ff-card" style="font-size: 13px; line-height: 1.6;">
+    <h4 style="margin: 0 0 6px 0; font-size: 15px;">1. Scope and Authorization</h4>
+    <p>BLine is an internal enterprise resource planning (ERP) platform designed exclusively for authorized personnel, contractors, and statutory auditors of the manufacturing unit. Unauthorized access, automated scraping, or extraction of recipe formulas, billing rosters, and GST ledger data is strictly prohibited.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">2. User Credentials and Access Control</h4>
+    <p>Each authorized staff member is assigned distinct role-based access credentials. Sharing authentication tokens, passwords, or bypassing permission gates to modify product master records, pricing tables, or inventory valuation constitutes a breach of employment contract and statutory compliance policies.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">3. Accuracy of Industrial Master Data</h4>
+    <p>Users entering batch records, GSTIN identification codes, HSN classifications, and invoice figures are obligated to ensure data accuracy. Falsification of manufacturing output, raw material consumption rates, or tax invoices will result in immediate suspension and disciplinary escalation.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">4. FSSAI and Quality Control Traceability</h4>
+    <p>All batch codes, ingredient lots, expiry records, and bill of materials (BOM) captured within the system serve as legal traceability records required under the Food Safety and Standards Authority of India (FSSAI) regulations. Master records may not be deleted without statutory review.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">5. Limitation of Liability and System Uptime</h4>
+    <p>The software is provided on an enterprise internal deployment basis. Management reserves the right to perform scheduled maintenance, update cryptographic certificates, and enforce multi-factor authentication protocols without prior operational interruption notice.</p>
+
+    <h4 style="margin: 16px 0 6px 0; font-size: 15px;">6. Privacy and Data Protection</h4>
+    <p>BLine processes employee credentials, customer and supplier contact information, and operational telemetry solely for legitimate business operations, statutory GST and FSSAI compliance, and security auditing. Data is protected in transit and at rest, retained for applicable statutory periods, and may be accessed or corrected by contacting <code>compliance@BLine.internal</code>.</p>
+</div>
+{% endblock %}

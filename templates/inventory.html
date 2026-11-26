@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Inventory Management{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Inventory & Stock Management</h2>
+    <div class="ff-header-sub">Real-time balances for raw materials and finished products, inward material receipts, and full audit ledger.</div>
+</div>
+
+<div class="ff-grid-4" style="margin-bottom: 20px;">
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Raw Material Items</div>
+        <div class="ff-metric-value">{{ materials|length }}</div>
+        <div class="ff-metric-change">Active inventory tracks</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Finished Goods SKUs</div>
+        <div class="ff-metric-value">{{ products|length }}</div>
+        <div class="ff-metric-change">Available snack batches</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Low Stock Alerts</div>
+        <div class="ff-metric-value" style="color: #c5221f;">
+            {{ materials|selectattr('low_stock')|list|length }}
+        </div>
+        <div class="ff-metric-change">Below safety buffer</div>
+    </div>
+    <div class="ff-card ff-metric-card">
+        <div class="ff-metric-label">Audit Transactions</div>
+        <div class="ff-metric-value">{{ transactions|length }}</div>
+        <div class="ff-metric-change">Ledger journal entries</div>
+    </div>
+</div>
+
+{% set low_items = materials|selectattr('low_stock')|list %}
+{% if low_items %}
+<div class="ff-alert ff-alert-warning" style="margin-bottom: 20px;">
+    <strong>Low Stock Warning:</strong> The following raw materials are at or below minimum threshold:
+    {% for item in low_items %}
+        <b>{{ item.name }}</b> ({{ item.stock_qty }} {{ item.unit }}){% if not loop.last %}, {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="ff-tabs" style="margin-bottom: 16px;">
+    <a href="#materials-section" class="ff-tab-btn active">Raw Materials Inventory</a>
+    <a href="#finished-section" class="ff-tab-btn">Finished Goods Inventory</a>
+    {% if can_manage %}
+    <a href="#inward-section" class="ff-tab-btn">Receive Raw Materials</a>
+    {% endif %}
+    <a href="#ledger-section" class="ff-tab-btn">Transaction Audit Ledger</a>
+</div>
+
+<div id="materials-section" class="ff-card" style="margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h4 style="margin: 0; font-size: 15px;">Raw Materials Stock Balance</h4>
+        <form method="GET" action="{{ url_for('inventory') }}" style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" name="search" value="{{ search }}" placeholder="Filter material..." style="padding: 4px 8px; font-size: 12px; width: 180px;">
+            <select name="stock" onchange="this.form.submit()" style="padding: 4px 8px; font-size: 12px;">
+                <option value="All" {% if stock_filter == 'All' %}selected{% endif %}>All Levels</option>
+                <option value="Low" {% if stock_filter == 'Low' %}selected{% endif %}>Low Stock Only</option>
+                <option value="Available" {% if stock_filter == 'Available' %}selected{% endif %}>In Stock Only</option>
+            </select>
+            <button type="submit" class="ff-btn ff-btn-primary" style="padding: 4px 10px; font-size: 12px;">Search</button>
+        </form>
+    </div>
+
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Item Code</th>
+                    <th>Material Name</th>
+                    <th>Category</th>
+                    <th style="text-align: right;">Current Stock</th>
+                    <th style="text-align: right;">Safety Buffer</th>
+                    <th style="text-align: right;">Unit Rate</th>
+                    <th style="text-align: center;">Stock Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in materials %}
+                <tr>
+                    <td><b>{{ m.material_id }}</b></td>
+                    <td>{{ m.name }}</td>
+                    <td>{{ m.category }}</td>
+                    <td style="text-align: right; font-weight: 600;">
+                        {{ "%.2f"|format(m.stock_qty) }} {{ m.unit }}
+                    </td>
+                    <td style="text-align: right; color: #5f6d7a;">
+                        {{ "%.2f"|format(m.min_stock_level) }} {{ m.unit }}
+                    </td>
+                    <td style="text-align: right;">Rs. {{ "%.2f"|format(m.purchase_rate) }}</td>
+                    <td style="text-align: center;">
+                        {% if m.low_stock %}
+                        <span class="ff-badge ff-badge-inactive">Low Stock</span>
+                        {% else %}
+                        <span class="ff-badge ff-badge-active">In Stock</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align: center; color: #5f6d7a;">No raw materials match criteria.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="finished-section" class="ff-card" style="margin-bottom: 24px;">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Finished Goods Inventory</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>SKU Code</th>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th style="text-align: right;">Available Stock Units</th>
+                    <th style="text-align: right;">Selling Price (INR)</th>
+                    <th style="text-align: center;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr>
+                    <td><b>{{ p.product_id }}</b></td>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.category }}</td>
+                    <td style="text-align: right; font-weight: 600; color: #0b645b;">
+                        {{ p.stock_qty|default(0) }} Units
+                    </td>
+                    <td style="text-align: right;">Rs. {{ "%.2f"|format(p.selling_price) }}</td>
+                    <td style="text-align: center;">
+                        <span class="ff-badge ff-badge-active">{{ p.status }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align: center; color: #5f6d7a;">No products registered.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_manage %}
+<div id="inward-section" class="ff-card" style="margin-bottom: 24px;">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Receive Inward Raw Material Shipment</h4>
+    <p style="font-size: 13px; color: #5f6d7a; margin-bottom: 16px;">
+        Add incoming raw materials into warehouse inventory and automatically update the stock ledger.
+    </p>
+    <form method="POST" action="{{ url_for('raw_material_inward_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Select Raw Material *</label>
+                <select name="material_id" required>
+                    {% for m in materials %}
+                    <option value="{{ m.material_id }}">
+                        {{ m.name }} (Current: {{ m.stock_qty }} {{ m.unit }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <label>Received Quantity *</label>
+                <input type="number" step="0.01" min="0.01" name="quantity" placeholder="e.g. 50" required>
+            </div>
+            <div>
+                <label>Supplier / Inward Delivery Challan No.</label>
+                <input type="text" name="reference" placeholder="e.g. PO-2026-904 / DC-8812">
+                <label>Receipt Inspection Notes</label>
+                <textarea name="notes" rows="2" placeholder="Quality checks, batch number, moisture test passed..."></textarea>
+            </div>
+        </div>
+        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Record Inward Stock & Post to Ledger</button>
+    </form>
+</div>
+{% endif %}
+
+<div id="ledger-section" class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Inventory Transaction Ledger</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Txn ID</th>
+                    <th>Timestamp</th>
+                    <th>Item Type</th>
+                    <th>Item Name</th>
+                    <th>Movement Type</th>
+                    <th style="text-align: right;">Quantity</th>
+                    <th style="text-align: right;">Balance After</th>
+                    <th>Reference / Order ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td><b>{{ t.transaction_id or t.txn_id }}</b></td>
+                    <td style="font-size: 12px; color: #5f6d7a;">{{ t.timestamp[:16] if t.timestamp else '-' }}</td>
+                    <td>{{ (t.item_type or 'RAW_MATERIAL')|replace('_', ' ') }}</td>
+                    <td><b>{{ t.item_name }}</b></td>
+                    <td>
+                        {% if 'IN' in (t.transaction_type or t.movement_type or '') or (t.quantity_change|default(t.change_qty|default(0)) > 0) %}
+                        <span class="ff-badge ff-badge-active">+ {{ t.transaction_type or t.movement_type }}</span>
+                        {% else %}
+                        <span class="ff-badge ff-badge-inactive">- {{ t.transaction_type or t.movement_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right; font-weight: 600;">
+                        {{ t.quantity_change|default(t.change_qty|default(t.quantity)) }}
+                    </td>
+                    <td style="text-align: right; color: #5f6d7a;">
+                        {{ t.balance_after|default(t.balance_qty) }}
+                    </td>
+                    <td><b>{{ t.reference_id or '-' }}</b></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" style="text-align: center; color: #5f6d7a;">No inventory transactions posted yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}New Order{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Commercial Order Entry</h2>
+    <div class="ff-header-sub">Place wholesale finished goods orders for assigned retail and distributor accounts.</div>
+</div>
+
+<!-- Customer Selector -->
+<div class="ff-col-2">
+    <div>
+        <form method="GET" action="{{ url_for('new_order') }}">
+            <label>Select Customer Account *</label>
+            <select name="customer_id" onchange="this.form.submit()">
+                {% for c in active_customers %}
+                <option value="{{ c.customer_id }}" {% if c.customer_id == customer_obj.customer_id %}selected{% endif %}>
+                    {{ c.customer_id }} : {{ c.name }} ({{ c.city }}, {{ c.state }})
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        <details style="margin-top:10px;">
+            <summary class="ff-btn">Add Customer Details</summary>
+            <form method="POST" action="{{ url_for('add_order_customer_post') }}" class="ff-card" style="margin-top:8px;">
+                <label>Customer Name *</label>
+                <input type="text" name="name" required>
+                <div class="ff-col-2">
+                    <div>
+                        <label>Phone *</label>
+                        <input type="text" name="phone" required>
+                        <label>Email</label>
+                        <input type="email" name="email">
+                        <label>City</label>
+                        <input type="text" name="city">
+                    </div>
+                    <div>
+                        <label>State *</label>
+                        <select name="state" required>
+                            {% for state in states %}<option value="{{ state }}">{{ state }}</option>{% endfor %}
+                        </select>
+                        <label>GSTIN</label>
+                        <input type="text" name="gstin">
+                        <label>Address</label>
+                        <input type="text" name="address">
+                    </div>
+                </div>
+                <button type="submit" class="ff-btn ff-btn-primary">Save Customer</button>
+            </form>
+        </details>
+    </div>
+    <div>
+        <div style="background: #ffffff; border: 1px solid #d1d5db; padding: 10px; border-radius: 3px; font-size: 11px;">
+            <div><b>Customer State:</b> {{ customer_state }}</div>
+            <div><b>Tax Scheme:</b> {% if is_intra %}Intra-State (CGST 2.5% + SGST 2.5%){% else %}Inter-State (IGST 5.0%){% endif %}</div>
+            <div><b>GSTIN:</b> {{ customer_obj.gstin or 'Unregistered' }}</div>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<!-- Add Line Item Form -->
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Add Line Item to Order</h4>
+<form method="POST" action="{{ url_for('add_to_cart') }}" style="margin-bottom: 20px;">
+    <input type="hidden" name="customer_id" value="{{ customer_obj.customer_id }}">
+    <div style="display: grid; grid-template-columns: 2.5fr 1.5fr 1.2fr 1fr 1fr; gap: 12px; align-items: flex-end;">
+        <div>
+            <label>Select Finished Good *</label>
+            <select name="product_id" id="prod-select" onchange="updatePriceAndStock()">
+                {% for p in active_products %}
+                <option value="{{ p.product_id }}" data-price="{{ p.selling_price }}" data-stock="{{ p.available_stock }}">
+                    {{ p.product_id }} : {{ p.name }} ({{ p.pack_size }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Unit Price (INR)</label>
+            <input type="number" step="0.01" min="0" name="unit_price" id="prod-price" value="{{ active_products[0].selling_price if active_products else 50.0 }}" readonly required>
+        </div>
+        <div>
+            <label>Discount (%)</label>
+            <input type="number" step="0.1" min="0" max="100" name="discount_percent" value="0">
+        </div>
+        <div>
+            <label>Order Quantity (Whole Packets)</label>
+            <input type="number" min="1" name="quantity" id="prod-qty" value="50" required>
+            <div id="stock-hint" style="font-size: 11px; margin-top: -4px;"></div>
+        </div>
+        <div>
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block" style="padding: 8px 10px;">Add to Order</button>
+        </div>
+    </div>
+</form>
+
+<hr>
+
+<!-- Cart Items Review -->
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Order Summary & Item Review</h4>
+
+{% if cart_items %}
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>SKU</th>
+                <th>Product</th>
+                <th>Pack</th>
+                <th>Rate (INR)</th>
+                <th>Discount (%)</th>
+                <th>Qty</th>
+                <th>Taxable (INR)</th>
+                <th>CGST</th>
+                <th>SGST</th>
+                <th>IGST</th>
+                <th>Total (INR)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in summary['items'] %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><b>{{ it.product_id }}</b></td>
+                <td>{{ it.name }}</td>
+                <td>{{ it.pack_size }}</td>
+                <td>{{ "%.2f"|format(it.unit_price) }}</td>
+                <td>{{ "%.2f"|format(it.discount_percent|default(0)) }}</td>
+                <td>{{ it.quantity }}</td>
+                <td>{{ "%.2f"|format(it.taxable_value) }}</td>
+                <td>{% if is_intra %}{{ "%.2f"|format(it.cgst_amount) }}{% else %}0.00{% endif %}</td>
+                <td>{% if is_intra %}{{ "%.2f"|format(it.sgst_amount) }}{% else %}0.00{% endif %}</td>
+                <td>{% if not is_intra %}{{ "%.2f"|format(it.igst_amount) }}{% else %}0.00{% endif %}</td>
+                <td><b>Rs. {{ "%.2f"|format(it.total_amount) }}</b></td>
+                <td>
+                    <form method="POST" action="{{ url_for('remove_from_cart') }}" style="margin: 0;">
+                        <input type="hidden" name="customer_id" value="{{ customer_obj.customer_id }}">
+                        <input type="hidden" name="product_id" value="{{ it.product_id }}">
+                        <button type="submit" class="ff-btn" style="padding: 2px 8px; font-size: 11px; color:#c5221f; border-color:#fad2cf;">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 4 Valuation Metrics -->
+<div class="ff-metric-grid-4">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Total Order Quantity</div>
+        <div class="ff-metric-num">{{ summary.total_quantity }} packets</div>
+        <div class="ff-metric-note">{{ summary.total_items }} line items</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Taxable Subtotal</div>
+        <div class="ff-metric-num">Rs. {{ "%.2f"|format(summary.subtotal) }}</div>
+        <div class="ff-metric-note">Excluding taxes</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Total GST (5%)</div>
+        <div class="ff-metric-num">Rs. {{ "%.2f"|format(summary.total_gst) }}</div>
+        <div class="ff-metric-note">{% if is_intra %}CGST: Rs. {{ "%.2f"|format(summary.cgst) }} | SGST: Rs. {{ "%.2f"|format(summary.sgst) }}{% else %}IGST: Rs. {{ "%.2f"|format(summary.igst) }}{% endif %}</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Final Order Value</div>
+        <div class="ff-metric-num">Rs. {{ "%.2f"|format(summary.total_amount) }}</div>
+        <div class="ff-metric-note">Payable amount</div>
+    </div>
+</div>
+
+<!-- Order Submission Form -->
+<form method="POST" action="{{ url_for('submit_order') }}" style="margin-top: 14px;">
+    <input type="hidden" name="customer_id" value="{{ customer_obj.customer_id }}">
+    <label>Expected Delivery Date *</label>
+    <input type="date" name="expected_delivery_date" min="{{ today }}" required>
+    <label>Order Notes / Dispatch Remarks</label>
+    <textarea name="notes" rows="2" placeholder="e.g. Early morning delivery requested at factory depot..."></textarea>
+
+    <div style="margin-top: 10px;">
+        <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Submit Order to Factory</button>
+    </div>
+</form>
+
+{% else %}
+<div class="ff-alert ff-alert-info">
+    No line items currently added to this order. Select a finished good SKU above to begin.
+</div>
+{% endif %}
+
+<script>
+    function updatePriceAndStock() {
+        var sel = document.getElementById('prod-select');
+        var opt = sel.options[sel.selectedIndex];
+        var price = opt.getAttribute('data-price');
+        var stock = opt.getAttribute('data-stock');
+        document.getElementById('prod-price').value = parseFloat(price).toFixed(2);
+        var hint = document.getElementById('stock-hint');
+        hint.innerHTML = '<span style="color:#0b645b;">Available stock: ' + stock + ' pkts</span>';
+    }
+    updatePriceAndStock();
+</script>
+{% endblock %}

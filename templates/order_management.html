@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Order Management{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Commercial Order Verification & Approval</h2>
+    <div class="ff-header-sub">Factory administration review: inventory reservation, quantity audits, approval, and rejection.</div>
+</div>
+
+<!-- Filters -->
+<form method="GET" action="{{ url_for('order_management') }}" style="margin-bottom: 16px;">
+    <div style="display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1fr; gap: 10px; align-items: flex-end;">
+        <div>
+            <label>Search Order ID or Customer</label>
+            <input type="text" name="search" value="{{ search_kw }}" placeholder="e.g. ORD-2026, Retailer A">
+        </div>
+        <div>
+            <label>Sales Representative</label>
+            <select name="salesman" onchange="this.form.submit()">
+                <option value="All">All</option>
+                {% for s in salesmen %}
+                <option value="{{ s }}" {% if s == sel_salesman %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Order Status Filter</label>
+            <select name="status" onchange="this.form.submit()">
+                {% for st in statuses %}
+                <option value="{{ st }}" {% if st == sel_status %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Filter</button>
+        </div>
+    </div>
+</form>
+
+<!-- Order Roster Table -->
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Order Submissions ({{ filtered_orders|length }})</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Order Ref</th>
+                <th>Order Date</th>
+                <th>Customer Account</th>
+                <th>Sales Rep</th>
+                <th>Units</th>
+                <th>Total (INR)</th>
+                <th>Current Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in filtered_orders %}
+            <tr>
+                <td><b>{{ o.order_id }}</b></td>
+                <td>{{ o.order_date }}</td>
+                <td>{{ o.customer_name }}</td>
+                <td>{{ o.salesman_name }}</td>
+                <td>{{ o.total_quantity }}</td>
+                <td>Rs. {{ "%.2f"|format(o.total_amount) }}</td>
+                <td><span class="ff-badge {% if o.status in ['Approved', 'Invoiced', 'Dispatched'] %}ff-badge-active{% elif o.status == 'Rejected' %}ff-badge-inactive{% else %}ff-badge-role{% endif %}">{{ o.status }}</span></td>
+                <td>
+                    <a href="{{ url_for('order_management', inspect_order=o.order_id, search=search_kw, salesman=sel_salesman, status=sel_status) }}" class="ff-btn" style="padding: 2px 8px; font-size: 11px;">Inspect & Audit</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" style="text-align:center; color:#6b7280; padding:16px;">No orders match the selected search criteria.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if target_order %}
+<hr>
+<h3 style="margin: 0 0 10px 0; font-size: 16px;">Order Action & Stock Verification : {{ target_order.order_id }}</h3>
+<div style="background: #ffffff; border: 1px solid #d1d5db; padding: 12px; border-radius: 3px; font-size: 12px; margin-bottom: 14px;">
+    <div><b>Order Ref:</b> {{ target_order.order_id }} | <b>Date:</b> {{ target_order.order_date }} | <b>Status:</b> <b>{{ target_order.status }}</b></div>
+    <div><b>Customer:</b> {{ target_order.customer_name }} | <b>State:</b> {{ target_order.customer_state }} | <b>GSTIN:</b> {{ target_order.customer_gstin or 'Unregistered' }}</div>
+    <div><b>Sales Representative:</b> {{ target_order.salesman_name }} ({{ target_order.salesman_id }})</div>
+    {% if target_order.notes %}
+    <div><b>Order Notes:</b> {{ target_order.notes }}</div>
+    {% endif %}
+</div>
+
+<!-- Stock Audit Table -->
+<h5 style="margin: 0 0 8px 0; font-size: 13px;">Finished Goods Inventory Audit</h5>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Product Name</th>
+                <th>Pack Size</th>
+                <th>Requested Qty</th>
+                <th>Available Stock</th>
+                <th>Unit Price (INR)</th>
+                <th>Line Total (INR)</th>
+                <th>Stock Check</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in stock_audit_rows %}
+            <tr>
+                <td><b>{{ it.sku }}</b></td>
+                <td>{{ it.name }}</td>
+                <td>{{ it.pack_size }}</td>
+                <td>{{ it.req_qty }}</td>
+                <td><b>{{ it.avail_stock }}</b></td>
+                <td>{{ "%.2f"|format(it.unit_price) }}</td>
+                <td>Rs. {{ "%.2f"|format(it.total) }}</td>
+                <td>
+                    {% if 'SUFFICIENT' in it.status %}
+                        <span class="ff-badge ff-badge-active">SUFFICIENT</span>
+                    {% elif 'SHORTAGE' in it.status %}
+                        <span class="ff-badge ff-badge-inactive">{{ it.status }}</span>
+                    {% else %}
+                        <span class="ff-badge ff-badge-role">{{ it.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if has_stock_shortage and target_order.status in ['Submitted', 'Pending Approval'] %}
+<div class="ff-alert ff-alert-error">
+    <b>INSUFFICIENT FINISHED-GOODS STOCK WARNING:</b>
+    <ul style="margin: 6px 0 0 18px; padding: 0;">
+        {% for sd in shortage_details %}
+        <li>{{ sd }}</li>
+        {% endfor %}
+    </ul>
+    <div style="margin-top: 6px;">Order approval is blocked until stock is replenished by production or requested quantities are adjusted.</div>
+</div>
+{% endif %}
+
+<!-- Approve & Reject Action Panes -->
+<div class="ff-col-2" style="margin-top: 16px;">
+    <div class="ff-card">
+        <h5 style="margin: 0 0 8px 0; font-size: 13px;">Approve Order</h5>
+        {% if target_order.status in ['Submitted', 'Pending Approval'] %}
+            {% if has_stock_shortage %}
+                <button class="ff-btn" disabled style="opacity: 0.6;">Approve Order (Blocked by Shortage)</button>
+            {% else %}
+                <form method="POST" action="{{ url_for('approve_order_post') }}">
+                    <input type="hidden" name="order_id" value="{{ target_order.order_id }}">
+                    <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Confirm Factory Approval</button>
+                </form>
+            {% endif %}
+        {% else %}
+            <div style="font-size: 12px; color: #6b7280;">Order is currently in '{{ target_order.status }}' status.</div>
+        {% endif %}
+    </div>
+
+    <div class="ff-card">
+        <h5 style="margin: 0 0 8px 0; font-size: 13px;">Reject Order</h5>
+        {% if target_order.status in ['Submitted', 'Pending Approval'] %}
+            <form method="POST" action="{{ url_for('reject_order_post') }}">
+                <input type="hidden" name="order_id" value="{{ target_order.order_id }}">
+                <label>Mandatory Rejection Reason *</label>
+                <input type="text" name="rejection_reason" placeholder="e.g. Credit limit exceeded" required>
+                <button type="submit" class="ff-btn ff-btn-block" style="color: #c5221f; border-color: #fad2cf; background: #fff;">Reject Order</button>
+            </form>
+        {% elif target_order.status == 'Approved' %}
+            <form method="POST" action="{{ url_for('revoke_approval_post') }}">
+                <input type="hidden" name="order_id" value="{{ target_order.order_id }}">
+                <button type="submit" class="ff-btn ff-btn-block">Revoke Approval & Release Stock Reservation</button>
+            </form>
+        {% else %}
+            <div style="font-size: 12px; color: #6b7280;">No rejection action available for status '{{ target_order.status }}'.</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

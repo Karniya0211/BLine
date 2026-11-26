@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Customer Master{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Customer Master</h2>
+    <div class="ff-header-sub">Commercial trade account registry, distributor classifications, GSTIN compliance, and credit tiers.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('customers', tab='directory') }}" class="ff-tab-btn {% if active_tab == 'directory' %}active{% endif %}">Trade Accounts</a>
+    {% if can_edit %}
+    <a href="{{ url_for('customers', tab='add') }}" class="ff-tab-btn {% if active_tab == 'add' %}active{% endif %}">Register Account</a>
+    {% endif %}
+</div>
+
+{% if active_tab == 'directory' %}
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Registered Trade Accounts ({{ customers|length }})</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Account Code</th>
+                <th>Entity Name</th>
+                <th>Channel</th>
+                <th>Telephone</th>
+                <th>City</th>
+                <th>State</th>
+                <th>GSTIN</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in customers %}
+            <tr>
+                <td><b>{{ c.customer_id }}</b></td>
+                <td>{{ c.name }}</td>
+                <td>{{ c.customer_type }}</td>
+                <td>{{ c.phone }}</td>
+                <td>{{ c.city }}</td>
+                <td>{{ c.state }}</td>
+                <td>{{ c.gstin or 'Unregistered' }}</td>
+                <td><span class="ff-badge {% if c.status == 'Active' %}ff-badge-active{% else %}ff-badge-inactive{% endif %}">{{ c.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% elif active_tab == 'add' and can_edit %}
+<div class="ff-card">
+    <h4 style="margin: 0 0 12px 0; font-size: 15px;">Register Commercial Account</h4>
+    <form method="POST" action="{{ url_for('add_customer_post') }}">
+        <div class="ff-col-2">
+            <div>
+                <label>Account Code (Required) *</label>
+                <input type="text" name="customer_id" placeholder="e.g. CUST-003" required>
+
+                <label>Registered Commercial Name *</label>
+                <input type="text" name="name" placeholder="e.g. Murugan Provision Stores" required>
+
+                <label>Channel Classification *</label>
+                <select name="customer_type">
+                    <option value="Retailer">Retailer</option>
+                    <option value="Distributor">Distributor</option>
+                </select>
+
+                <label>Telephone Number (10 digits) *</label>
+                <input type="text" name="phone" placeholder="e.g. 9840123456" required>
+
+                <label>Billing Email</label>
+                <input type="email" name="email" placeholder="e.g. billing@muruganstores.in">
+            </div>
+            <div>
+                <label>City *</label>
+                <input type="text" name="city" placeholder="e.g. Madurai" required>
+
+                <label>State *</label>
+                <select name="state">
+                    {% for st in states %}
+                    <option value="{{ st }}">{{ st }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>GSTIN Identification</label>
+                <input type="text" name="gstin" placeholder="e.g. 33AAAAA0000A1Z5">
+
+                <label>Agreed Commercial Terms</label>
+                <input type="text" name="special_pricing" placeholder="e.g. Standard 5% distributor discount">
+
+                <label>Status</label>
+                <select name="status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <label>Registered Delivery Address</label>
+        <textarea name="address" rows="2" placeholder="Premises, street, PIN code..."></textarea>
+
+        <div style="margin-top: 10px;">
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Commit Account to Database</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}GST Billing{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>GST Billing & Tax Invoice Generation</h2>
+    <div class="ff-header-sub">Generate statutory tax invoices, calculate CGST/SGST/IGST, and produce print-ready PDF vouchers.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('gst_billing', tab='generate') }}" class="ff-tab-btn {% if active_tab == 'generate' %}active{% endif %}">Generate New Tax Invoice</a>
+    <a href="{{ url_for('gst_billing', tab='roster') }}" class="ff-tab-btn {% if active_tab == 'roster' %}active{% endif %}">Billing Roster Overview</a>
+</div>
+
+{% if active_tab == 'generate' %}
+    {% if approved_orders %}
+    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Approved Orders Ready for Billing</h4>
+    <form method="GET" action="{{ url_for('gst_billing') }}" style="margin-bottom: 16px;">
+        <input type="hidden" name="tab" value="generate">
+        <label>Customer</label>
+        <select name="customer_id" onchange="this.form.submit()">
+            <option value="">All existing customers</option>
+            {% for customer in customers %}
+            <option value="{{ customer.customer_id }}" {% if customer.customer_id == selected_customer_id %}selected{% endif %}>{{ customer.name }} ({{ customer.customer_id }})</option>
+            {% endfor %}
+        </select>
+        <label>Select Approved Order for Invoicing *</label>
+        <select name="order_id" onchange="this.form.submit()">
+            {% for o in approved_orders %}
+            <option value="{{ o.order_id }}" {% if o.order_id == selected_order.order_id %}selected{% endif %}>
+                {{ o.order_id }} : {{ o.customer_name }} ({{ o.customer_state }}) - Rs. {{ "%.2f"|format(o.total_amount) }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <!-- Invoice Preview Card -->
+    <div style="background: #ffffff; border: 1px solid #d1d5db; padding: 12px; border-radius: 3px; font-size: 12px; margin-bottom: 14px;">
+        <div><b>Order Ref:</b> {{ selected_order.order_id }} | <b>Order Date:</b> {{ selected_order.order_date }}</div>
+        <div><b>Customer:</b> {{ selected_order.customer_name }} | <b>Destination State:</b> {{ cust_state }}</div>
+        <div><b>GST Classification:</b> <b>{% if is_intra %}Intra-State (CGST 2.5% + SGST 2.5%){% else %}Inter-State (IGST 5.0%){% endif %}</b></div>
+        <div><b>GSTIN:</b> {{ selected_order.customer_gstin or 'Unregistered / Composition' }}</div>
+    </div>
+
+    <!-- Line Items Table -->
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Product Name</th>
+                    <th>HSN</th>
+                    <th>Quantity</th>
+                    <th>Rate (INR)</th>
+                    <th>Taxable Value (INR)</th>
+                    <th>CGST (2.5%)</th>
+                    <th>SGST (2.5%)</th>
+                    <th>IGST (5.0%)</th>
+                    <th>Total (INR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in invoice_totals['items'] %}
+                <tr>
+                    <td><b>{{ it.product_id }}</b></td>
+                    <td>{{ it.name }}</td>
+                    <td>{{ it.hsn_code }}</td>
+                    <td>{{ it.quantity }}</td>
+                    <td>{{ "%.2f"|format(it.unit_price) }}</td>
+                    <td>{{ "%.2f"|format(it.taxable_value) }}</td>
+                    <td>{% if is_intra %}{{ "%.2f"|format(it.cgst_amount) }}{% else %}0.00{% endif %}</td>
+                    <td>{% if is_intra %}{{ "%.2f"|format(it.sgst_amount) }}{% else %}0.00{% endif %}</td>
+                    <td>{% if not is_intra %}{{ "%.2f"|format(it.igst_amount) }}{% else %}0.00{% endif %}</td>
+                    <td><b>Rs. {{ "%.2f"|format(it.total_amount) }}</b></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 4 Valuation Metrics -->
+    <div class="ff-metric-grid-4">
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Total Taxable Value</div>
+            <div class="ff-metric-num">Rs. {{ "%.2f"|format(invoice_totals.total_taxable_value) }}</div>
+            <div class="ff-metric-note">Ex-factory basis</div>
+        </div>
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Central GST (CGST)</div>
+            <div class="ff-metric-num">{% if is_intra %}Rs. {{ "%.2f"|format(invoice_totals.total_cgst) }}{% else %}N/A{% endif %}</div>
+            <div class="ff-metric-note">2.5% Intra-State</div>
+        </div>
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">{% if is_intra %}State GST (SGST){% else %}Integrated GST (IGST){% endif %}</div>
+            <div class="ff-metric-num">{% if is_intra %}Rs. {{ "%.2f"|format(invoice_totals.total_sgst) }}{% else %}Rs. {{ "%.2f"|format(invoice_totals.total_igst) }}{% endif %}</div>
+            <div class="ff-metric-note">{% if is_intra %}2.5% SGST{% else %}5.0% IGST{% endif %}</div>
+        </div>
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Invoice Grand Total</div>
+            <div class="ff-metric-num">Rs. {{ "%.2f"|format(invoice_totals.total_amount) }}</div>
+            <div class="ff-metric-note">Final billed INR</div>
+        </div>
+    </div>
+
+    <!-- Invoice Generation Form -->
+    {% if existing_inv %}
+        <div class="ff-alert ff-alert-warning">
+            Notice: Order {{ selected_order.order_id }} has already been invoiced under Invoice Number: <b>{{ existing_inv.invoice_number }}</b>.
+        </div>
+        <a href="{{ url_for('download_invoice_pdf', invoice_number=existing_inv.invoice_number) }}" class="ff-btn ff-btn-primary">
+            Download Existing Invoice PDF ({{ existing_inv.invoice_number }})
+        </a>
+    {% else %}
+            <form method="POST" action="{{ url_for('generate_invoice_post') }}">
+                <input type="hidden" name="order_id" value="{{ selected_order.order_id }}">
+                <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Generate & Post Statutory Tax Invoice</button>
+            </form>
+    {% endif %}
+
+    {% else %}
+    <div class="ff-alert ff-alert-info">
+        No approved orders currently awaiting invoicing. Approve pending orders in Order Management first.
+    </div>
+    {% endif %}
+
+{% elif active_tab == 'roster' %}
+    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Billed Commercial Invoices</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Invoice No</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>State</th>
+                    <th>Taxable (INR)</th>
+                    <th>GST (INR)</th>
+                    <th>Total (INR)</th>
+                    <th>Payment</th>
+                    <th>Dispatch</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                <tr>
+                    <td><b>{{ inv.invoice_number }}</b></td>
+                    <td>{{ inv.invoice_date }}</td>
+                    <td>{{ inv.customer_name }}</td>
+                    <td>{{ inv.customer_state }}</td>
+                    <td>Rs. {{ "%.2f"|format(inv.total_taxable_value) }}</td>
+                    <td>Rs. {{ "%.2f"|format(inv.total_gst) }}</td>
+                    <td><b>Rs. {{ "%.2f"|format(inv.total_amount) }}</b></td>
+                    <td><span class="ff-badge {% if inv.payment_status == 'Paid' %}ff-badge-active{% else %}ff-badge-role{% endif %}">{{ inv.payment_status }}</span></td>
+                    <td><span class="ff-badge {% if inv.dispatch_status == 'Completed' %}ff-badge-active{% else %}ff-badge-role{% endif %}">{{ inv.dispatch_status }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align:center; color:#6b7280; padding:16px;">No invoices recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+{% endblock %}

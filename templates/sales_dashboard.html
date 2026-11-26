@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Sales Dashboard{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Commercial & Sales Operations Dashboard</h2>
+    <div class="ff-header-sub">Active Session: {{ session.get('user_name') }} | Role: {{ session.get('user_role') }} | Live Financial & Order Metrics</div>
+</div>
+
+<!-- 6 Metric Cards Ribbon -->
+<div class="ff-metric-grid-6">
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Total Orders</div>
+        <div class="ff-metric-num">{{ metrics.total_orders }}</div>
+        <div class="ff-metric-note">Lifetime bookings</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Pending Orders</div>
+        <div class="ff-metric-num">{{ metrics.pending_orders }}</div>
+        <div class="ff-metric-note">Awaiting approval</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Approved Orders</div>
+        <div class="ff-metric-num">{{ metrics.approved_orders }}</div>
+        <div class="ff-metric-note">Ready / Invoiced</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Total Sales</div>
+        <div class="ff-metric-num">Rs. {{ "%.2f"|format(metrics.total_sales) }}</div>
+        <div class="ff-metric-note">Billed volume</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Total Invoices</div>
+        <div class="ff-metric-num">{{ metrics.total_invoices }}</div>
+        <div class="ff-metric-note">Generated GST bills</div>
+    </div>
+    <div class="ff-metric-panel">
+        <div class="ff-metric-label">Outstanding Dues</div>
+        <div class="ff-metric-num">Rs. {{ "%.2f"|format(metrics.outstanding_payments) }}</div>
+        <div class="ff-metric-note">Pending realization</div>
+    </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="ff-col-2">
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Product-Wise Sales Volume</h4>
+        <div id="chart-product-sales" style="height: 280px;"></div>
+    </div>
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Customer Account Realization</h4>
+        <div id="chart-customer-sales" style="height: 280px;"></div>
+    </div>
+</div>
+
+<div class="ff-col-2">
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Order Status Lifecycle</h4>
+        <div id="chart-order-status" style="height: 260px;"></div>
+    </div>
+    <div class="ff-card">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px;">Invoiced Revenue Trends</h4>
+        <div id="chart-revenue-trends" style="height: 260px;"></div>
+    </div>
+</div>
+
+<!-- Recent Orders Table -->
+<h4 style="margin: 18px 0 10px 0; font-size: 15px;">Recent Order Submissions</h4>
+<div class="ff-table-wrapper">
+    <table class="ff-table">
+        <thead>
+            <tr>
+                <th>Order Ref</th>
+                <th>Customer Entity</th>
+                <th>Sales Representative</th>
+                <th>Total Value (INR)</th>
+                <th>Order Status</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in recent_orders %}
+            <tr>
+                <td><b>{{ o.order_id }}</b></td>
+                <td>{{ o.customer_name }}</td>
+                <td>{{ o.salesman_name }}</td>
+                <td>Rs. {{ "%.2f"|format(o.total_amount) }}</td>
+                <td><span class="ff-badge {% if o.status in ['Approved', 'Invoiced', 'Dispatched'] %}ff-badge-active{% else %}ff-badge-role{% endif %}">{{ o.status }}</span></td>
+                <td>{{ o.created_at[:10] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align:center; color:#6b7280; padding:20px;">No orders currently logged in BLine. Submit an order to populate the log.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // 1. Product Sales Bar Chart
+    var pData = {{ product_chart_data | tojson }};
+    Plotly.newPlot('chart-product-sales', [{
+        x: pData.names,
+        y: pData.values,
+        type: 'bar',
+        marker: { color: ['#1f4e5b', '#2c6e80', '#457b9d', '#3d5a80'] }
+    }], {
+        margin: { t: 15, b: 25, l: 40, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+
+    // 2. Customer Sales Bar Chart
+    var cData = {{ customer_chart_data | tojson }};
+    Plotly.newPlot('chart-customer-sales', [{
+        x: cData.names,
+        y: cData.values,
+        type: 'bar',
+        marker: { color: ['#2c6e80', '#1f4e5b', '#457b9d'] }
+    }], {
+        margin: { t: 15, b: 25, l: 40, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+
+    // 3. Order Status Donut Chart
+    var sData = {{ status_chart_data | tojson }};
+    Plotly.newPlot('chart-order-status', [{
+        labels: sData.labels,
+        values: sData.values,
+        type: 'pie',
+        hole: 0.45,
+        marker: { colors: ['#1f4e5b', '#2c6e80', '#457b9d', '#64748b', '#94a3b8'] }
+    }], {
+        margin: { t: 15, b: 15, l: 15, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+
+    // 4. Revenue Trend Line Chart
+    var rData = {{ trend_chart_data | tojson }};
+    Plotly.newPlot('chart-revenue-trends', [{
+        x: rData.dates,
+        y: rData.values,
+        type: 'scatter',
+        mode: 'lines+markers',
+        marker: { color: '#0b645b' },
+        line: { color: '#0b645b' }
+    }], {
+        margin: { t: 15, b: 25, l: 40, r: 15 },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#111827', size: 11 }
+    }, { responsive: true, displayModeBar: false });
+</script>
+{% endblock %}

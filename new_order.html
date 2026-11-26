@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FactoryFlow - New Order</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Plotly CDN for existing charts -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+    <div class="ff-layout">
+        <!-- Sidebar -->
+        <aside class="ff-sidebar">
+            <div class="ff-sidebar-brand">
+                <img src="/static/img/logo.png" width="220" alt="FactoryFlow">
+            </div>
+            <div class="ff-sidebar-user">
+                <div class="ff-user-name">Suresh Murugan</div>
+                <div class="ff-user-email">sales@factoryflow.com</div>
+                <div style="margin-top: 6px;"><span class="ff-badge ff-badge-role">Sales Representative</span></div>
+            </div>
+
+            <div class="ff-nav-title">Operations Menu</div>
+            <nav class="ff-nav-list">
+                
+                    <a href="/sales-dashboard" class="ff-nav-item ">
+                        Sales Dashboard
+                    </a>
+                
+                    <a href="/new-order" class="ff-nav-item active">
+                        New Order
+                    </a>
+                
+                    <a href="/my-orders" class="ff-nav-item ">
+                        My Orders
+                    </a>
+                
+                    <a href="/products" class="ff-nav-item ">
+                        Product Master
+                    </a>
+                
+                    <a href="/customers" class="ff-nav-item ">
+                        Customer Master
+                    </a>
+                
+                    <a href="/settings" class="ff-nav-item ">
+                        System Settings
+                    </a>
+                
+                    <a href="/terms" class="ff-nav-item ">
+                        Terms of Service
+                    </a>
+                
+                    <a href="/privacy" class="ff-nav-item ">
+                        Privacy Policy
+                    </a>
+                
+            </nav>
+
+            <div style="margin-top: 20px;">
+                <a href="/logout" class="ff-btn ff-btn-block" style="background:#1a2734; color:#d5dbe1; border-color:#283747;">Sign Out Session</a>
+            </div>
+
+            <div class="ff-sidebar-footer">
+                FactoryFlow ERP v2.0.0 (Phase 2)<br>
+                Manufacturing Unit 1 (Chennai)<br>
+                Murukku • Mixture • Chips • Sweets
+            </div>
+        </aside>
+
+        <!-- Main Content Surface -->
+        <main class="ff-main">
+            
+                
+            
+
+            
+<div class="ff-header">
+    <h2>Commercial Order Entry</h2>
+    <div class="ff-header-sub">Place wholesale finished goods orders for assigned retail and distributor accounts.</div>
+</div>
+
+<!-- Customer Selector -->
+<div class="ff-col-2">
+    <div>
+        <form method="GET" action="/new-order">
+            <label>Select Customer Account *</label>
+            <select name="customer_id" onchange="this.form.submit()">
+                
+                <option value="CUST-001" selected>
+                    CUST-001 : Retailer A (Chennai, Tamil Nadu)
+                </option>
+                
+                <option value="CUST-002" >
+                    CUST-002 : Distributor B (Bengaluru, Karnataka)
+                </option>
+                
+            </select>
+        </form>
+    </div>
+    <div>
+        <div style="background: #ffffff; border: 1px solid #d1d5db; padding: 10px; border-radius: 3px; font-size: 11px;">
+            <div><b>Customer State:</b> Tamil Nadu</div>
+            <div><b>Tax Scheme:</b> Intra-State (CGST 2.5% + SGST 2.5%)</div>
+            <div><b>GSTIN:</b> 33AAAAA1234A1Z5</div>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<!-- Add Line Item Form -->
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Add Line Item to Order</h4>
+<form method="POST" action="/cart/add" style="margin-bottom: 20px;">
+    <input type="hidden" name="customer_id" value="CUST-001">
+    <div style="display: grid; grid-template-columns: 2.5fr 1.5fr 1.2fr 1fr; gap: 12px; align-items: flex-end;">
+        <div>
+            <label>Select Finished Good *</label>
+            <select name="product_id" id="prod-select" onchange="updatePriceAndStock()">
+                
+                <option value="PRD-001" data-price="50.0" data-stock="238">
+                    PRD-001 : Murukku 200g (200g)
+                </option>
+                
+                <option value="PRD-002" data-price="60.0" data-stock="150">
+                    PRD-002 : Mixture 200g (200g)
+                </option>
+                
+                <option value="PRD-003" data-price="75.0" data-stock="100">
+                    PRD-003 : Banana Chips 200g (200g)
+                </option>
+                
+                <option value="PRD-004" data-price="120.0" data-stock="80">
+                    PRD-004 : Mysore Pak 200g (200g)
+                </option>
+                
+            </select>
+        </div>
+        <div>
+            <label>Unit Price (INR)</label>
+            <input type="number" step="0.5" min="1.0" name="unit_price" id="prod-price" value="50.0" required>
+        </div>
+        <div>
+            <label>Order Quantity</label>
+            <input type="number" min="1" step="5" name="quantity" id="prod-qty" value="50" required>
+            <div id="stock-hint" style="font-size: 11px; margin-top: -4px;"></div>
+        </div>
+        <div>
+            <button type="submit" class="ff-btn ff-btn-primary ff-btn-block" style="padding: 8px 10px;">Add to Order</button>
+        </div>
+    </div>
+</form>
+
+<hr>
+
+<!-- Cart Items Review -->
+<h4 style="margin: 0 0 10px 0; font-size: 14px;">Order Summary & Item Review</h4>
+
+
+<div class="ff-alert ff-alert-info">
+    No line items currently added to this order. Select a finished good SKU above to begin.
+</div>
+
+
+<script>
+    function updatePriceAndStock() {
+        var sel = document.getElementById('prod-select');
+        var opt = sel.options[sel.selectedIndex];
+        var price = opt.getAttribute('data-price');
+        var stock = opt.getAttribute('data-stock');
+        document.getElementById('prod-price').value = parseFloat(price).toFixed(2);
+        var hint = document.getElementById('stock-hint');
+        hint.innerHTML = '<span style="color:#0b645b;">Available stock: ' + stock + ' pkts</span>';
+    }
+    updatePriceAndStock();
+</script>
+
+        </main>
+    </div>
+</body>
+</html>

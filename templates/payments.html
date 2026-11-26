@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Payments{% endblock %}
+
+{% block content %}
+<div class="ff-header">
+    <h2>Commercial Accounts Receivable & Payment Recording</h2>
+    <div class="ff-header-sub">Record customer payment realization, track outstanding invoice balances, and log transaction references.</div>
+</div>
+
+<div class="ff-tabs">
+    <a href="{{ url_for('payments', tab='record') }}" class="ff-tab-btn {% if active_tab == 'record' %}active{% endif %}">Record Payment Realization</a>
+    <a href="{{ url_for('payments', tab='ledger') }}" class="ff-tab-btn {% if active_tab == 'ledger' %}active{% endif %}">Realization Ledger</a>
+</div>
+
+{% if active_tab == 'record' %}
+    {% if invoices %}
+    <form method="GET" action="{{ url_for('payments') }}" style="margin-bottom: 16px;">
+        <input type="hidden" name="tab" value="record">
+        <div class="ff-col-2">
+            <div>
+                <label>Filter Invoices by Customer</label>
+                <select name="customer" onchange="this.form.submit()">
+                    <option value="All">All Customers</option>
+                    {% for c in customer_options %}
+                    <option value="{{ c }}" {% if c == sel_cust %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label>Select Target Invoice *</label>
+                <select name="invoice_number" onchange="this.form.submit()">
+                    {% for inv in eligible_invoices %}
+                    <option value="{{ inv.invoice_number }}" {% if inv.invoice_number == target_inv.invoice_number %}selected{% endif %}>
+                        {{ inv.invoice_number }} : {{ inv.customer_name }} (Total: Rs. {{ "%.2f"|format(inv.total_amount) }}) - Status: {{ inv.payment_status }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <!-- 4 Balance Metrics -->
+    <div class="ff-metric-grid-4">
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Total Invoice Value</div>
+            <div class="ff-metric-num">Rs. {{ "%.2f"|format(balance_summary.invoice_total) }}</div>
+            <div class="ff-metric-note">Gross billed amount</div>
+        </div>
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Total Realized</div>
+            <div class="ff-metric-num">Rs. {{ "%.2f"|format(balance_summary.total_paid) }}</div>
+            <div class="ff-metric-note">{{ past_payments|length }} receipt(s)</div>
+        </div>
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Remaining Outstanding</div>
+            <div class="ff-metric-num" style="color: {% if balance_summary.outstanding_balance > 0 %}#c5221f{% else %}#137333{% endif %};">
+                Rs. {{ "%.2f"|format(balance_summary.outstanding_balance) }}
+            </div>
+            <div class="ff-metric-note">Pending realization</div>
+        </div>
+        <div class="ff-metric-panel">
+            <div class="ff-metric-label">Settlement Status</div>
+            <div class="ff-metric-num">{{ balance_summary.payment_status }}</div>
+            <div class="ff-metric-note">Audit flag</div>
+        </div>
+    </div>
+
+    <!-- Past Receipts Table -->
+    {% if past_payments %}
+    <h5 style="margin: 16px 0 8px 0; font-size: 13px;">Past Receipts for this Invoice</h5>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Receipt ID</th>
+                    <th>Receipt Date</th>
+                    <th>Amount Realized (INR)</th>
+                    <th>Mode</th>
+                    <th>Transaction Ref</th>
+                    <th>Operator</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in past_payments %}
+                <tr>
+                    <td><b>{{ p.payment_id }}</b></td>
+                    <td>{{ p.payment_date }}</td>
+                    <td><b>Rs. {{ "%.2f"|format(p.amount) }}</b></td>
+                    <td>{{ p.payment_mode }}</td>
+                    <td>{{ p.transaction_ref }}</td>
+                    <td>{{ p.recorded_by }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <hr>
+
+    {% if balance_summary.is_settled %}
+        <div class="ff-alert ff-alert-success">
+            This invoice is completely settled. No outstanding balance remains.
+        </div>
+    {% else %}
+        {% if session.get('user_role') == 'Statutory Auditor' %}
+            <div class="ff-alert ff-alert-info">Auditor accounts hold read-only viewing access; payment recording is disabled.</div>
+        {% else %}
+            <h5 style="margin: 0 0 10px 0; font-size: 13px;">Enter Payment Details</h5>
+            <form method="POST" action="{{ url_for('record_payment_post') }}">
+                <input type="hidden" name="invoice_number" value="{{ target_inv.invoice_number }}">
+                <div class="ff-col-2">
+                    <div>
+                        <label>Amount Received (INR) *</label>
+                        <input type="number" step="0.5" min="1.0" max="{{ balance_summary.outstanding_balance }}" name="amount" value="{{ balance_summary.outstanding_balance }}" required>
+
+                        <label>Payment Mode *</label>
+                        <select name="payment_mode">
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Cash">Cash</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Receipt Date *</label>
+                        <input type="date" name="payment_date" value="{{ today_str }}" required>
+
+                        <label>Transaction / UTR / Cheque Reference *</label>
+                        <input type="text" name="transaction_ref" placeholder="e.g. UPI/2026/8921829 or CHQ-00129" required>
+                    </div>
+                </div>
+
+                <label>Receipt Remarks</label>
+                <textarea name="remarks" rows="2" placeholder="e.g. Received via NEFT into SBI Current Account..."></textarea>
+
+                <div style="margin-top: 10px;">
+                    <button type="submit" class="ff-btn ff-btn-primary ff-btn-block">Record Payment Realization</button>
+                </div>
+            </form>
+        {% endif %}
+    {% endif %}
+
+    {% else %}
+    <div class="ff-alert ff-alert-info">
+        No invoices found in the system. Payments can only be received against statutory invoices.
+    </div>
+    {% endif %}
+
+{% elif active_tab == 'ledger' %}
+    <h4 style="margin: 0 0 10px 0; font-size: 14px;">Complete Payment Realization Log</h4>
+    <div class="ff-table-wrapper">
+        <table class="ff-table">
+            <thead>
+                <tr>
+                    <th>Receipt Ref</th>
+                    <th>Date</th>
+                    <th>Invoice No</th>
+                    <th>Customer</th>
+                    <th>Realized (INR)</th>
+                    <th>Mode</th>
+                    <th>Transaction Ref</th>
+                    <th>Audit Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments|reverse %}
+                <tr>
+                    <td><b>{{ p.payment_id }}</b></td>
+                    <td>{{ p.payment_date }}</td>
+                    <td>{{ p.invoice_number }}</td>
+                    <td>{{ p.customer_name }}</td>
+                    <td><b>Rs. {{ "%.2f"|format(p.amount) }}</b></td>
+                    <td>{{ p.payment_mode }}</td>
+                    <td>{{ p.transaction_ref }}</td>
+                    <td><span class="ff-badge ff-badge-active">{{ p.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align:center; color:#6b7280; padding:16px;">No payment realizations recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+{% endblock %}
